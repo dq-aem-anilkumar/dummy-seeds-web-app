@@ -1,15 +1,41 @@
 
 import api from './api';
-import { LoginCredentials } from '../types/auth';
+
+export interface LoginRequest {
+  userName: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  accessToken: string;
+  headerUserId: string;
+  name: string;
+}
+
+export interface RegisterRequest {
+  userName: string;
+  name: string;
+  mobileNumber: string;
+  email: string;
+  password: string;
+  adhaarNumber?: string;
+}
 
 export const authService = {
-  login: async (credentials: LoginCredentials) => {
+  login: async (credentials: LoginRequest): Promise<LoginResponse> => {
     const response = await api.post('/web/api/v1/auth/login', credentials);
     return response.data;
   },
 
-  register: async (userData: FormData) => {
-    const response = await api.post('/web/api/v1/user/register', userData, {
+  register: async (userData: RegisterRequest) => {
+    const formData = new FormData();
+    Object.entries(userData).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') {
+        formData.append(key, value);
+      }
+    });
+    
+    const response = await api.post('/web/api/v1/user/register', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -17,26 +43,8 @@ export const authService = {
     return response.data;
   },
 
-  getCurrentUser: async () => {
-    const response = await api.get('/web/api/v1/user/profile');
-    return response.data;
-  },
-
-  updateProfile: async (userData: FormData) => {
-    const response = await api.put('/web/api/v1/user/update', userData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  },
-
-  uploadProfileImage: async (imageData: FormData) => {
-    const response = await api.post('/web/api/v1/superadmin/uploadimage', imageData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  },
+  logout: () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  }
 };

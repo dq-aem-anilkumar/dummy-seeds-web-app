@@ -1,83 +1,83 @@
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { authService, LoginRequest, RegisterRequest } from '../services/authService';
 
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { AuthState, LoginCredentials, User } from '../types/auth';
-import { authService } from '../services/authService';
+interface AuthState {
+  user: {
+    id: string;
+    name: string;
+    userName: string;
+    userType: string;
+    email: string;
+    mobileNumber: string;
+    profileImage: string | null;
+    emailVerified: boolean;
+    phoneVerified: boolean;
+    kycStatus: boolean;
+    approvalStatus: boolean;
+    isActive: boolean;
+    isDeleted: boolean;
+    isLoggedIn: boolean;
+    adhaarNumber: string;
+  } | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  loading: boolean;
+  error: string | null;
+}
 
-// Initialize state from localStorage if available
-const getInitialState = (): AuthState => {
-  try {
-    const token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
-    const user = userStr ? JSON.parse(userStr) : null;
-    
-    return {
-      user,
-      token,
-      isAuthenticated: !!token && !!user,
-      loading: false,
-      error: null,
-    };
-  } catch (error) {
-    // Clear corrupted data
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    return {
-      user: null,
-      token: null,
-      isAuthenticated: false,
-      loading: false,
-      error: null,
-    };
-  }
+const initialState: AuthState = {
+  user: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null,
+  token: localStorage.getItem('token'),
+  isAuthenticated: localStorage.getItem('token') ? true : false,
+  loading: false,
+  error: null,
 };
-
-const initialState: AuthState = getInitialState();
-
-export const loginUser = createAsyncThunk(
-  'auth/login',
-  async (credentials: LoginCredentials, { rejectWithValue }) => {
-    try {
-      const response = await authService.login(credentials);
-      if (response.token && response.user) {
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.user));
-        return response;
-      } else {
-        throw new Error('Invalid response from server');
-      }
-    } catch (error: any) {
-      const message = error.response?.data?.message || error.message || 'Login failed';
-      return rejectWithValue(message);
-    }
-  }
-);
 
 export const registerUser = createAsyncThunk(
   'auth/register',
-  async (userData: FormData, { rejectWithValue }) => {
+  async (userData: RegisterRequest, { rejectWithValue }) => {
     try {
       const response = await authService.register(userData);
       return response;
     } catch (error: any) {
-      const message = error.response?.data?.message || error.message || 'Registration failed';
-      return rejectWithValue(message);
+      return rejectWithValue(error.response?.data?.message || 'Registration failed');
     }
   }
 );
 
-export const updateProfile = createAsyncThunk(
-  'auth/updateProfile',
-  async (userData: FormData, { rejectWithValue }) => {
+export const loginUser = createAsyncThunk(
+  'auth/login',
+  async (credentials: LoginRequest, { rejectWithValue }) => {
     try {
-      const response = await authService.updateProfile(userData);
-      if (response.user) {
-        localStorage.setItem('user', JSON.stringify(response.user));
-        return response.user;
-      }
-      return response;
+      const response = await authService.login(credentials);
+      
+      // Store token and user info
+      localStorage.setItem('token', response.accessToken);
+      
+      // Create user object from response
+      const user = {
+        id: response.headerUserId,
+        name: response.name,
+        userName: credentials.userName,
+        userType: 'USER', // Default, will be updated when we get full user data
+        email: '',
+        mobileNumber: '',
+        profileImage: null,
+        emailVerified: false,
+        phoneVerified: false,
+        kycStatus: false,
+        approvalStatus: true,
+        isActive: true,
+        isDeleted: false,
+        isLoggedIn: true,
+        adhaarNumber: ''
+      };
+      
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      return { user, token: response.accessToken };
     } catch (error: any) {
-      const message = error.response?.data?.message || error.message || 'Update failed';
-      return rejectWithValue(message);
+      return rejectWithValue(error.response?.data?.message || 'Login failed');
     }
   }
 );
@@ -90,13 +90,7 @@ const authSlice = createSlice({
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
-      state.error = null;
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-    },
-    setUser: (state, action: PayloadAction<User>) => {
-      state.user = action.payload;
-      localStorage.setItem('user', JSON.stringify(action.payload));
+      authService.logout();
     },
     clearError: (state) => {
       state.error = null;
@@ -111,9 +105,9 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
+        state.isAuthenticated = true;
         state.user = action.payload.user;
         state.token = action.payload.token;
-        state.isAuthenticated = true;
         state.error = null;
       })
       .addCase(loginUser.rejected, (state, action) => {
@@ -135,23 +129,9 @@ const authSlice = createSlice({
       .addCase(registerUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
-      })
-      // Update profile cases
-      .addCase(updateProfile.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(updateProfile.fulfilled, (state, action) => {
-        state.loading = false;
-        state.user = action.payload;
-        state.error = null;
-      })
-      .addCase(updateProfile.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
       });
   },
 });
 
-export const { logout, setUser, clearError } = authSlice.actions;
+export const { logout, clearError } = authSlice.actions;
 export default authSlice.reducer;

@@ -1,9 +1,15 @@
 
 import { useState, useEffect } from 'react';
+import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, UserCheck, UserX } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { UserDialog } from '../components/UserDialog';
 import { userService } from '../services/userService';
 import { useAuth } from '../hooks/useAuth';
 import { toast } from '../components/ui/use-toast';
@@ -15,17 +21,21 @@ export const UsersPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<'view' | 'edit'>('view');
   const { isSuperAdmin, isAdmin } = useAuth();
 
   const fetchUsers = async (page = 1, search = '', filter = '') => {
     try {
       setLoading(true);
       const response = await userService.getUsers(page, 20, search, filter);
-      setUsers(response.data || []);
+      setUsers(Array.isArray(response.data) ? response.data : []);
       setCurrentPage(page);
     } catch (error) {
       console.error('Failed to fetch users:', error);
       toast({ title: 'Error', description: 'Failed to fetch users', variant: 'destructive' });
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -38,6 +48,18 @@ export const UsersPage = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     fetchUsers(1, searchTerm, filterStatus);
+  };
+
+  const handleViewUser = (user: User) => {
+    setSelectedUser(user);
+    setDialogMode('view');
+    setDialogOpen(true);
+  };
+
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setDialogMode('edit');
+    setDialogOpen(true);
   };
 
   const handleApproveUser = async (userId: string) => {
@@ -73,156 +95,263 @@ export const UsersPage = () => {
       return <Badge variant="destructive">Disabled</Badge>;
     }
     if (!user.approvalStatus) {
-      return <Badge variant="secondary">Pending Approval</Badge>;
+      return <Badge variant="secondary">Pending</Badge>;
     }
-    return <Badge variant="default">Approved</Badge>;
+    return <Badge variant="default">Active</Badge>;
+  };
+
+  const stats = {
+    total: users.length,
+    active: users.filter(u => u.isActive && u.approvalStatus).length,
+    pending: users.filter(u => !u.approvalStatus).length,
+    disabled: users.filter(u => !u.isActive).length,
   };
 
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Users</h1>
-        <div className="space-y-4">
-          {[...Array(5)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader>
-                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Users</h1>
+            <p className="text-muted-foreground">Manage your users efficiently</p>
+          </div>
+        </div>
+        
+        <div className="grid gap-4 md:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
               </CardHeader>
+              <CardContent>
+                <div className="h-8 w-16 bg-gray-200 rounded animate-pulse"></div>
+              </CardContent>
             </Card>
           ))}
         </div>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center space-x-4 animate-pulse">
+                  <div className="h-12 w-12 bg-gray-200 rounded-full"></div>
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 w-48 bg-gray-200 rounded"></div>
+                    <div className="h-3 w-32 bg-gray-200 rounded"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Users</h1>
-          <p className="text-gray-600">Manage all system users</p>
+          <h1 className="text-3xl font-bold tracking-tight">Users</h1>
+          <p className="text-muted-foreground">Manage your users efficiently</p>
         </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.total}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{stats.active}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Disabled</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{stats.disabled}</div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Search and Filters */}
-      <div className="flex gap-4">
-        <form onSubmit={handleSearch} className="flex gap-2 flex-1">
-          <Input
-            placeholder="Search users..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 border border-input rounded-md bg-background"
-          >
-            <option value="all">All Users</option>
-            <option value="approved">Approved</option>
-            <option value="pending">Pending</option>
-            <option value="disabled">Disabled</option>
-          </select>
-          <Button type="submit">Search</Button>
-        </form>
-      </div>
-
-      {/* Users List */}
-      <div className="space-y-4">
-        {users.map((user) => (
-          <Card key={user.id}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                    {user.profileImage ? (
-                      <img
-                        src={user.profileImage}
-                        alt="Profile"
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-lg font-medium">
-                        {user.name.charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">{user.name}</CardTitle>
-                    <p className="text-sm text-gray-600">@{user.userName}</p>
-                    <p className="text-sm text-gray-600">{user.email}</p>
-                    <p className="text-sm text-gray-600">{user.mobileNumber}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {getStatusBadge(user)}
-                  {user.userType && (
-                    <Badge variant="outline">{user.userType}</Badge>
-                  )}
-                </div>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search users..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch(e)}
+                />
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">Email Verified:</span>
-                    <span className={user.emailVerified ? 'text-green-600 ml-1' : 'text-red-600 ml-1'}>
-                      {user.emailVerified ? 'Yes' : 'No'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="font-medium">Phone Verified:</span>
-                    <span className={user.phoneVerified ? 'text-green-600 ml-1' : 'text-red-600 ml-1'}>
-                      {user.phoneVerified ? 'Yes' : 'No'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="font-medium">KYC Status:</span>
-                    <span className={user.kycStatus ? 'text-green-600 ml-1' : 'text-yellow-600 ml-1'}>
-                      {user.kycStatus ? 'Completed' : 'Pending'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="font-medium">Login Status:</span>
-                    <span className={user.isLoggedIn ? 'text-green-600 ml-1' : 'text-gray-600 ml-1'}>
-                      {user.isLoggedIn ? 'Online' : 'Offline'}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex space-x-2">
-                  {(isAdmin() || isSuperAdmin()) && !user.approvalStatus && (
-                    <Button
-                      size="sm"
-                      onClick={() => handleApproveUser(user.id)}
-                    >
-                      Approve
-                    </Button>
-                  )}
-                  {(isAdmin() || isSuperAdmin()) && (
-                    <Button
-                      size="sm"
-                      variant={user.isActive ? 'destructive' : 'default'}
-                      onClick={() => handleToggleUserStatus(user)}
-                    >
-                      {user.isActive ? 'Disable' : 'Enable'}
-                    </Button>
-                  )}
-                </div>
+            </div>
+            <div className="flex gap-2">
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-40">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Filter" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Users</SelectItem>
+                  <SelectItem value="approved">Active</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="disabled">Disabled</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button onClick={handleSearch}>Search</Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Verification</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div className="flex items-center space-x-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={user.profileImage || ''} />
+                          <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">{user.name}</div>
+                          <div className="text-sm text-muted-foreground">@{user.userName}</div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="text-sm">{user.email}</div>
+                        <div className="text-sm text-muted-foreground">{user.mobileNumber}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(user)}
+                        {user.userType && user.userType !== 'USER' && (
+                          <Badge variant="outline">{user.userType}</Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Badge variant={user.emailVerified ? 'default' : 'secondary'} className="text-xs">
+                          Email
+                        </Badge>
+                        <Badge variant={user.phoneVerified ? 'default' : 'secondary'} className="text-xs">
+                          Phone
+                        </Badge>
+                        <Badge variant={user.kycStatus ? 'default' : 'secondary'} className="text-xs">
+                          KYC
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleViewUser(user)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Details
+                          </DropdownMenuItem>
+                          {(isAdmin() || isSuperAdmin()) && (
+                            <>
+                              <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit User
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              {!user.approvalStatus && (
+                                <DropdownMenuItem onClick={() => handleApproveUser(user.id)}>
+                                  <UserCheck className="mr-2 h-4 w-4" />
+                                  Approve User
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem 
+                                onClick={() => handleToggleUserStatus(user)}
+                                className={user.isActive ? 'text-red-600' : 'text-green-600'}
+                              >
+                                {user.isActive ? (
+                                  <>
+                                    <UserX className="mr-2 h-4 w-4" />
+                                    Disable User
+                                  </>
+                                ) : (
+                                  <>
+                                    <UserCheck className="mr-2 h-4 w-4" />
+                                    Enable User
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            
+            {users.length === 0 && (
+              <div className="text-center py-12">
+                <div className="text-muted-foreground text-4xl mb-4">👥</div>
+                <h3 className="text-lg font-medium mb-2">No users found</h3>
+                <p className="text-sm text-muted-foreground">Try adjusting your search criteria</p>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-      {users.length === 0 && (
-        <div className="text-center py-12">
-          <div className="text-gray-400 text-4xl mb-4">👥</div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
-          <p className="text-gray-500">Try adjusting your search criteria</p>
-        </div>
-      )}
+      <UserDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        user={selectedUser}
+        mode={dialogMode}
+        onUserUpdated={() => fetchUsers(currentPage, searchTerm, filterStatus)}
+      />
     </div>
   );
 };
