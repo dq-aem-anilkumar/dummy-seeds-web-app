@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, UserCheck, UserX } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, UserCheck, UserX, Clock } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -20,17 +19,27 @@ export const UsersPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'view' | 'edit'>('view');
   const { isSuperAdmin, isAdmin } = useAuth();
 
-  const fetchUsers = async (page = 1, search = '', filter = '') => {
+  const fetchUsers = async (page = 0, search = '', filter = '') => {
     try {
       setLoading(true);
       const response = await userService.getUsers(page, 20, search, filter);
-      setUsers(Array.isArray(response.data) ? response.data : []);
+      console.log('Users API Response:', response);
+      
+      // Handle the response format with data field
+      const usersData = response.data || [];
+      const transformedUsers = Array.isArray(usersData) ? usersData.map((user: any) => ({
+        ...user,
+        userType: user.userRole?.name || 'USER',
+        profileImage: user.profileImageUrl
+      })) : [];
+      
+      setUsers(transformedUsers);
       setCurrentPage(page);
     } catch (error) {
       console.error('Failed to fetch users:', error);
@@ -151,72 +160,91 @@ export const UsersPage = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6 bg-slate-50 min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Users</h1>
-          <p className="text-muted-foreground">Manage your users efficiently</p>
+          <h1 className="text-3xl font-bold text-slate-900">Users Management</h1>
+          <p className="text-slate-600 mt-1">Manage and monitor user accounts</p>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+      <div className="grid gap-6 md:grid-cols-4">
+        <Card className="bg-white shadow-sm border-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600">Total Users</CardTitle>
+            <div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Users className="h-4 w-4 text-blue-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
+            <div className="text-2xl font-bold text-slate-900">{stats.total}</div>
+            <p className="text-xs text-slate-500 mt-1">All registered users</p>
           </CardContent>
         </Card>
-        <Card>
+
+        <Card className="bg-white shadow-sm border-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600">Active Users</CardTitle>
+            <div className="h-8 w-8 bg-green-100 rounded-lg flex items-center justify-center">
+              <UserCheck className="h-4 w-4 text-green-600" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{stats.active}</div>
+            <p className="text-xs text-slate-500 mt-1">Approved & active</p>
           </CardContent>
         </Card>
-        <Card>
+
+        <Card className="bg-white shadow-sm border-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600">Pending Approval</CardTitle>
+            <div className="h-8 w-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+              <Clock className="h-4 w-4 text-yellow-600" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+            <p className="text-xs text-slate-500 mt-1">Awaiting approval</p>
           </CardContent>
         </Card>
-        <Card>
+
+        <Card className="bg-white shadow-sm border-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Disabled</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600">Disabled</CardTitle>
+            <div className="h-8 w-8 bg-red-100 rounded-lg flex items-center justify-center">
+              <UserX className="h-4 w-4 text-red-600" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{stats.disabled}</div>
+            <p className="text-xs text-slate-500 mt-1">Inactive accounts</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Search and Filters */}
-      <Card>
-        <CardHeader>
+      {/* Main Content */}
+      <Card className="bg-white shadow-sm border-0">
+        <CardHeader className="border-b border-slate-100">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                 <Input
-                  placeholder="Search users..."
+                  placeholder="Search users by name, email, or username..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch(e)}
                 />
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-40">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Filter" />
+                <SelectTrigger className="w-48 h-11 border-slate-200">
+                  <Filter className="h-4 w-4 mr-2 text-slate-500" />
+                  <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Users</SelectItem>
@@ -225,72 +253,91 @@ export const UsersPage = () => {
                   <SelectItem value="disabled">Disabled</SelectItem>
                 </SelectContent>
               </Select>
-              <Button onClick={handleSearch}>Search</Button>
+              <Button 
+                onClick={handleSearch}
+                className="h-11 px-6 bg-blue-600 hover:bg-blue-700"
+              >
+                Search
+              </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
+
+        <CardContent className="p-0">
+          <div className="overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Verification</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                <TableRow className="bg-slate-50 hover:bg-slate-50">
+                  <TableHead className="font-semibold text-slate-700">User</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Contact</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Status</TableHead>
+                  <TableHead className="font-semibold text-slate-700">Verification</TableHead>
+                  <TableHead className="text-right font-semibold text-slate-700">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-10 w-10">
+                  <TableRow key={user.id} className="hover:bg-slate-50 transition-colors">
+                    <TableCell className="py-4">
+                      <div className="flex items-center space-x-4">
+                        <Avatar className="h-12 w-12">
                           <AvatarImage src={user.profileImage || ''} />
-                          <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold">
+                            {user.name.charAt(0)}
+                          </AvatarFallback>
                         </Avatar>
                         <div>
-                          <div className="font-medium">{user.name}</div>
-                          <div className="text-sm text-muted-foreground">@{user.userName}</div>
+                          <div className="font-semibold text-slate-900">{user.name}</div>
+                          <div className="text-sm text-slate-500">@{user.userName}</div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-4">
                       <div className="space-y-1">
-                        <div className="text-sm">{user.email}</div>
-                        <div className="text-sm text-muted-foreground">{user.mobileNumber}</div>
+                        <div className="text-sm text-slate-900">{user.email}</div>
+                        <div className="text-sm text-slate-500">{user.mobileNumber}</div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-4">
                       <div className="flex items-center gap-2">
                         {getStatusBadge(user)}
                         {user.userType && user.userType !== 'USER' && (
-                          <Badge variant="outline">{user.userType}</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {user.userType}
+                          </Badge>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-4">
                       <div className="flex gap-1">
-                        <Badge variant={user.emailVerified ? 'default' : 'secondary'} className="text-xs">
+                        <Badge 
+                          variant={user.emailVerified ? 'default' : 'secondary'} 
+                          className="text-xs"
+                        >
                           Email
                         </Badge>
-                        <Badge variant={user.phoneVerified ? 'default' : 'secondary'} className="text-xs">
+                        <Badge 
+                          variant={user.phoneVerified ? 'default' : 'secondary'} 
+                          className="text-xs"
+                        >
                           Phone
                         </Badge>
-                        <Badge variant={user.kycStatus ? 'default' : 'secondary'} className="text-xs">
+                        <Badge 
+                          variant={user.kycStatus ? 'default' : 'secondary'} 
+                          className="text-xs"
+                        >
                           KYC
                         </Badge>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right py-4">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
+                          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-100">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem onClick={() => handleViewUser(user)}>
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
@@ -334,11 +381,17 @@ export const UsersPage = () => {
               </TableBody>
             </Table>
             
-            {users.length === 0 && (
+            {loading && (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            )}
+            
+            {users.length === 0 && !loading && (
               <div className="text-center py-12">
-                <div className="text-muted-foreground text-4xl mb-4">👥</div>
-                <h3 className="text-lg font-medium mb-2">No users found</h3>
-                <p className="text-sm text-muted-foreground">Try adjusting your search criteria</p>
+                <div className="text-slate-400 text-5xl mb-4">👥</div>
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">No users found</h3>
+                <p className="text-sm text-slate-500">Try adjusting your search criteria</p>
               </div>
             )}
           </div>

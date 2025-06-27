@@ -61,13 +61,14 @@ export const RegisterPage = () => {
     if (!validateForm()) return;
 
     try {
-      const registrationData = new FormData();
-      registrationData.append('userName', formData.userName);
-      registrationData.append('name', formData.name);
-      registrationData.append('mobileNumber', formData.mobileNumber);
-      registrationData.append('email', formData.email);
-      registrationData.append('password', formData.password);
-      registrationData.append('adhaarNumber', formData.adhaarNumber);
+      const registrationData = {
+        userName: formData.userName,
+        name: formData.name,
+        mobileNumber: formData.mobileNumber,
+        email: formData.email,
+        password: formData.password,
+        adhaarNumber: formData.adhaarNumber || undefined,
+      };
 
       await dispatch(registerUser(registrationData) as any);
       toast({ title: 'Success', description: 'Registration successful! Please login with your credentials.' });
@@ -78,16 +79,22 @@ export const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md shadow-xl">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold text-gray-900">Create Your Account</CardTitle>
-          <CardDescription className="text-gray-600">Join our marketplace community</CardDescription>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="w-full max-w-lg shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
+        <CardHeader className="text-center pb-6">
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+            Create Account
+          </CardTitle>
+          <CardDescription className="text-slate-600 text-lg">
+            Join our marketplace community
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <CardContent className="px-8 pb-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="userName">Username *</Label>
+              <Label htmlFor="userName" className="text-sm font-semibold text-slate-700">
+                Username *
+              </Label>
               <Input
                 id="userName"
                 name="userName"
@@ -95,11 +102,15 @@ export const RegisterPage = () => {
                 value={formData.userName}
                 onChange={handleChange}
                 required
-                className="w-full"
+                className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                placeholder="Enter username"
               />
             </div>
+            
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name *</Label>
+              <Label htmlFor="name" className="text-sm font-semibold text-slate-700">
+                Full Name *
+              </Label>
               <Input
                 id="name"
                 name="name"
@@ -107,11 +118,15 @@ export const RegisterPage = () => {
                 value={formData.name}
                 onChange={handleChange}
                 required
-                className="w-full"
+                className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                placeholder="Enter full name"
               />
             </div>
+            
             <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
+              <Label htmlFor="email" className="text-sm font-semibold text-slate-700">
+                Email Address *
+              </Label>
               <Input
                 id="email"
                 name="email"
@@ -119,11 +134,15 @@ export const RegisterPage = () => {
                 value={formData.email}
                 onChange={handleChange}
                 required
-                className="w-full"
+                className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                placeholder="Enter email address"
               />
             </div>
+            
             <div className="space-y-2">
-              <Label htmlFor="mobileNumber">Mobile Number *</Label>
+              <Label htmlFor="mobileNumber" className="text-sm font-semibold text-slate-700">
+                Mobile Number *
+              </Label>
               <Input
                 id="mobileNumber"
                 name="mobileNumber"
@@ -131,11 +150,15 @@ export const RegisterPage = () => {
                 value={formData.mobileNumber}
                 onChange={handleChange}
                 required
-                className="w-full"
+                className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                placeholder="Enter mobile number"
               />
             </div>
+            
             <div className="space-y-2">
-              <Label htmlFor="password">Password *</Label>
+              <Label htmlFor="password" className="text-sm font-semibold text-slate-700">
+                Password *
+              </Label>
               <Input
                 id="password"
                 name="password"
@@ -143,11 +166,15 @@ export const RegisterPage = () => {
                 value={formData.password}
                 onChange={handleChange}
                 required
-                className="w-full"
+                className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                placeholder="Enter password"
               />
             </div>
+            
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password *</Label>
+              <Label htmlFor="confirmPassword" className="text-sm font-semibold text-slate-700">
+                Confirm Password *
+              </Label>
               <Input
                 id="confirmPassword"
                 name="confirmPassword"
@@ -155,33 +182,41 @@ export const RegisterPage = () => {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 required
-                className="w-full"
+                className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                placeholder="Confirm password"
               />
             </div>
+            
             <div className="space-y-2">
-              <Label htmlFor="adhaarNumber">Aadhaar Number</Label>
+              <Label htmlFor="adhaarNumber" className="text-sm font-semibold text-slate-700">
+                Aadhaar Number <span className="text-slate-400">(Optional)</span>
+              </Label>
               <Input
                 id="adhaarNumber"
                 name="adhaarNumber"
                 type="text"
                 value={formData.adhaarNumber}
                 onChange={handleChange}
-                className="w-full"
+                className="h-12 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                placeholder="Enter Aadhaar number"
               />
             </div>
             
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-semibold"
+              className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200"
             >
               {loading ? 'Creating Account...' : 'Create Account'}
             </Button>
             
-            <div className="text-center">
-              <p className="text-gray-600">
+            <div className="text-center pt-4">
+              <p className="text-slate-600">
                 Already have an account?{' '}
-                <Link to="/login" className="text-blue-600 hover:text-blue-800 font-medium">
+                <Link 
+                  to="/login" 
+                  className="text-blue-600 hover:text-blue-800 font-semibold hover:underline transition-colors"
+                >
                   Sign in here
                 </Link>
               </p>

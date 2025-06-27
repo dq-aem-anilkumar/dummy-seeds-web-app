@@ -1,7 +1,7 @@
 
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -38,11 +38,12 @@ api.interceptors.response.use(
       return {
         ...response,
         data: {
-          ...response.data.response,
+          data: response.data.response, // The actual data is in the response field
           totalRecords: response.data.totalRecords,
           status: response.data.status,
           flag: response.data.flag,
-          message: response.data.message
+          message: response.data.message,
+          otherInfo: response.data.otherInfo
         }
       };
     }

@@ -3,8 +3,18 @@ import api from './api';
 import { OrderFormData } from '../types/order';
 
 export const orderService = {
-  getOrders: async (page = 1, limit = 10) => {
-    const response = await api.get(`/web/api/v1/order?page=${page}&limit=${limit}`);
+  getOrders: async (page = 0, size = 10, sortBy = 'orderedAt', direction = 'desc', isForUserSpecific = false) => {
+    const params = new URLSearchParams();
+    params.append('page', page.toString());
+    params.append('size', size.toString());
+    params.append('sortBy', sortBy);
+    params.append('direction', direction);
+    
+    if (isForUserSpecific) {
+      params.append('isForUserSpecific', 'true');
+    }
+    
+    const response = await api.get(`/web/api/v1/order?${params.toString()}`);
     return response.data;
   },
 

@@ -3,8 +3,17 @@ import api from './api';
 import { ProductFormData } from '../types/product';
 
 export const productService = {
-  getProducts: async (page = 1, limit = 10, search = '') => {
-    const response = await api.get(`/web/api/v1/product?page=${page}&limit=${limit}&search=${search}`);
+  getProducts: async (page = 0, size = 10, search = '', filters: any = {}) => {
+    const params = new URLSearchParams();
+    params.append('page', page.toString());
+    params.append('size', size.toString());
+    
+    if (search) params.append('name', search);
+    if (filters.minPrice) params.append('minPrice', filters.minPrice.toString());
+    if (filters.maxPrice) params.append('maxPrice', filters.maxPrice.toString());
+    if (filters.isActive !== undefined) params.append('isActive', filters.isActive.toString());
+    
+    const response = await api.get(`/web/api/v1/product?${params.toString()}`);
     return response.data;
   },
 

@@ -2,8 +2,15 @@
 import api from './api';
 
 export const userService = {
-  getUsers: async (page = 1, limit = 10, search = '', filter = '') => {
-    const response = await api.get(`/web/api/v1/user?page=${page}&limit=${limit}&search=${search}&filter=${filter}`);
+  getUsers: async (page = 0, size = 10, search = '', filter = '') => {
+    const params = new URLSearchParams();
+    params.append('page', page.toString());
+    params.append('size', size.toString());
+    
+    if (search) params.append('search', search);
+    if (filter && filter !== 'all') params.append('filter', filter);
+    
+    const response = await api.get(`/web/api/v1/user?${params.toString()}`);
     return response.data;
   },
 

@@ -1,120 +1,185 @@
 
-import { Bell, MessageCircle, Settings, User, LogOut } from 'lucide-react';
-import { useDispatch } from 'react-redux';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { logout } from '../../store/authSlice';
-import { useAuth } from '../../hooks/useAuth';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
+import { Bell, MessageCircle, Settings, User, LogOut, ChevronDown } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { Badge } from '../ui/badge';
+import { useAuth } from '../../hooks/useAuth';
+import { useDispatch } from 'react-redux';
+import { logout } from '../../store/authSlice';
+import { toast } from '../ui/use-toast';
 
 export const TopNavigation = () => {
+  const { user } = useAuth();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user, isSuperAdmin } = useAuth();
+  const [notifications] = useState([
+    { id: 1, title: 'New order received', time: '5 min ago', read: false },
+    { id: 2, title: 'User registered', time: '1 hour ago', read: false },
+    { id: 3, title: 'System update completed', time: '2 hours ago', read: true },
+  ]);
+  const [messages] = useState([
+    { id: 1, from: 'John Doe', message: 'Hello, I need help with...', time: '10 min ago', read: false },
+    { id: 2, from: 'Jane Smith', message: 'Product inquiry about...', time: '30 min ago', read: true },
+  ]);
 
   const handleLogout = () => {
     dispatch(logout());
+    toast({ title: 'Success', description: 'Logged out successfully' });
     navigate('/login');
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase())
-      .join('')
-      .slice(0, 2);
+  const handleNotificationClick = () => {
+    toast({ title: 'Notifications', description: 'Notification panel opened' });
   };
 
+  const handleMessageClick = () => {
+    toast({ title: 'Messages', description: 'Message panel opened' });
+  };
+
+  const handleSettingsClick = () => {
+    toast({ title: 'Settings', description: 'Settings panel opened' });
+  };
+
+  const unreadNotifications = notifications.filter(n => !n.read).length;
+  const unreadMessages = messages.filter(m => !m.read).length;
+
   return (
-    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm">
+    <div className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shadow-sm">
       <div className="flex items-center space-x-4">
-        <h2 className="text-xl font-semibold text-gray-800">
-          Welcome back, {user?.name}!
+        <h2 className="text-xl font-semibold text-slate-800">
+          Dashboard
         </h2>
       </div>
 
       <div className="flex items-center space-x-4">
-        {/* Notification Bell */}
-        <Button variant="ghost" size="sm" className="relative">
-          <Bell className="h-5 w-5 text-gray-600" />
-          <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-            3
-          </span>
-        </Button>
-
-        {/* Messages */}
-        <Button variant="ghost" size="sm" className="relative">
-          <MessageCircle className="h-5 w-5 text-gray-600" />
-          <span className="absolute -top-1 -right-1 h-4 w-4 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
-            2
-          </span>
-        </Button>
-
-        {/* Settings */}
-        <Button variant="ghost" size="sm">
-          <Settings className="h-5 w-5 text-gray-600" />
-        </Button>
-
-        {/* Profile Dropdown */}
+        {/* Notifications */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="flex items-center space-x-2">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.profileImage} alt={user?.name} />
-                <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">
-                  {getInitials(user?.name || 'U')}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-sm font-medium text-gray-700">{user?.name}</span>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="relative hover:bg-slate-100"
+              onClick={handleNotificationClick}
+            >
+              <Bell className="h-5 w-5 text-slate-600" />
+              {unreadNotifications > 0 && (
+                <Badge 
+                  variant="destructive" 
+                  className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center"
+                >
+                  {unreadNotifications}
+                </Badge>
+              )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 bg-white border border-gray-200 shadow-lg">
-            <DropdownMenuLabel className="text-gray-900">
-              My Account
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={() => navigate('/profile')}
-              className="cursor-pointer hover:bg-gray-50"
-            >
-              <User className="mr-2 h-4 w-4" />
-              <span>View Profile</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => navigate('/edit-profile')}
-              className="cursor-pointer hover:bg-gray-50"
-            >
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Edit Profile</span>
-            </DropdownMenuItem>
-            {isSuperAdmin() && (
-              <DropdownMenuItem 
-                onClick={() => navigate('/master-data')}
-                className="cursor-pointer hover:bg-gray-50"
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Master Data</span>
+          <DropdownMenuContent align="end" className="w-80">
+            <div className="p-3 border-b">
+              <h3 className="font-semibold text-slate-800">Notifications</h3>
+            </div>
+            {notifications.map((notification) => (
+              <DropdownMenuItem key={notification.id} className="p-3 cursor-pointer">
+                <div className="flex-1">
+                  <p className={`text-sm ${!notification.read ? 'font-semibold' : ''}`}>
+                    {notification.title}
+                  </p>
+                  <p className="text-xs text-slate-500">{notification.time}</p>
+                </div>
+                {!notification.read && (
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                )}
               </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={handleLogout}
-              className="cursor-pointer hover:bg-gray-50 text-red-600"
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Messages */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="relative hover:bg-slate-100"
+              onClick={handleMessageClick}
             >
+              <MessageCircle className="h-5 w-5 text-slate-600" />
+              {unreadMessages > 0 && (
+                <Badge 
+                  variant="destructive" 
+                  className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center"
+                >
+                  {unreadMessages}
+                </Badge>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-80">
+            <div className="p-3 border-b">
+              <h3 className="font-semibold text-slate-800">Messages</h3>
+            </div>
+            {messages.map((message) => (
+              <DropdownMenuItem key={message.id} className="p-3 cursor-pointer">
+                <div className="flex-1">
+                  <p className={`text-sm ${!message.read ? 'font-semibold' : ''}`}>
+                    {message.from}
+                  </p>
+                  <p className="text-xs text-slate-600 truncate">{message.message}</p>
+                  <p className="text-xs text-slate-500">{message.time}</p>
+                </div>
+                {!message.read && (
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                )}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Settings */}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="hover:bg-slate-100"
+          onClick={handleSettingsClick}
+        >
+          <Settings className="h-5 w-5 text-slate-600" />
+        </Button>
+
+        {/* User Menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="flex items-center space-x-2 hover:bg-slate-100">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={user?.profileImage || ''} />
+                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white text-sm font-semibold">
+                  {user?.name?.charAt(0) || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="text-left hidden md:block">
+                <p className="text-sm font-medium text-slate-800">{user?.name}</p>
+                <p className="text-xs text-slate-500">{user?.userType}</p>
+              </div>
+              <ChevronDown className="h-4 w-4 text-slate-600" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
+              <User className="mr-2 h-4 w-4" />
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/edit-profile')} className="cursor-pointer">
+              <Settings className="mr-2 h-4 w-4" />
+              Edit Profile
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600">
               <LogOut className="mr-2 h-4 w-4" />
-              <span>Logout</span>
+              Sign Out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </header>
+    </div>
   );
 };
