@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { loginUser } from '../store/authSlice';
 import { useAuth } from '../hooks/useAuth';
@@ -21,9 +21,7 @@ export const LoginPage = () => {
   const location = useLocation();
   const { isAuthenticated, loading, error, user } = useAuth();
 
-  const from = location.state?.from?.pathname || getDefaultRoute(user?.userType);
-
-  function getDefaultRoute(userType?: string) {
+  const getDefaultRoute = (userType?: string) => {
     switch (userType) {
       case 'SUPER_ADMIN':
         return '/dashboard';
@@ -34,7 +32,9 @@ export const LoginPage = () => {
       default:
         return '/products';
     }
-  }
+  };
+
+  const from = location.state?.from?.pathname || getDefaultRoute(user?.userType);
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -58,7 +58,7 @@ export const LoginPage = () => {
     try {
       await dispatch(loginUser(credentials) as any);
     } catch (err) {
-      // Error is handled by the thunk
+      console.error('Login error:', err);
     }
   };
 
@@ -70,14 +70,14 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Welcome to Marketplace</CardTitle>
-          <CardDescription>Sign in to your account</CardDescription>
+          <CardTitle className="text-3xl font-bold text-gray-900">Welcome Back</CardTitle>
+          <CardDescription className="text-gray-600">Sign in to your marketplace account</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="userName">Username</Label>
               <Input
@@ -88,6 +88,7 @@ export const LoginPage = () => {
                 onChange={handleChange}
                 required
                 className="w-full"
+                placeholder="Enter your username"
               />
             </div>
             <div className="space-y-2">
@@ -100,15 +101,25 @@ export const LoginPage = () => {
                 onChange={handleChange}
                 required
                 className="w-full"
+                placeholder="Enter your password"
               />
             </div>
             <Button
               type="submit"
               disabled={loading}
-              className="w-full"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-semibold"
             >
               {loading ? 'Signing in...' : 'Sign in'}
             </Button>
+            
+            <div className="text-center">
+              <p className="text-gray-600">
+                Don't have an account?{' '}
+                <Link to="/register" className="text-blue-600 hover:text-blue-800 font-medium">
+                  Create one here
+                </Link>
+              </p>
+            </div>
           </form>
         </CardContent>
       </Card>

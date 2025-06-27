@@ -1,6 +1,6 @@
 
 import api from './api';
-import { LoginCredentials, User } from '../types/auth';
+import { LoginCredentials } from '../types/auth';
 
 export const authService = {
   login: async (credentials: LoginCredentials) => {
@@ -8,8 +8,12 @@ export const authService = {
     return response.data;
   },
 
-  register: async (userData: any) => {
-    const response = await api.post('/web/api/v1/user/register', userData);
+  register: async (userData: FormData) => {
+    const response = await api.post('/web/api/v1/user/register', userData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 
