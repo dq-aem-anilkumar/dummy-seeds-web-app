@@ -35,22 +35,39 @@ export const DashboardPage = () => {
     admins: { total: 0 },
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
+        setError(null);
         
-        // Fetch dashboard statistics
-        const [productsRes, ordersRes, usersRes] = await Promise.all([
+        // Fetch dashboard statistics with proper error handling
+        const [productsRes, ordersRes, usersRes] = await Promise.allSettled([
           productService.getProducts(1, 100),
           orderService.getOrders(1, 100),
           userService.getUsers(1, 100),
         ]);
 
-        const products = productsRes.data || [];
-        const orders = ordersRes.data || [];
-        const users = usersRes.data || [];
+        let products: any[] = [];
+        let orders: any[] = [];
+        let users: any[] = [];
+
+        // Handle products response
+        if (productsRes.status === 'fulfilled') {
+          products = productsRes.value?.data || [];
+        }
+
+        // Handle orders response
+        if (ordersRes.status === 'fulfilled') {
+          orders = ordersRes.value?.data || [];
+        }
+
+        // Handle users response
+        if (usersRes.status === 'fulfilled') {
+          users = usersRes.value?.data || [];
+        }
 
         setStats({
           products: {
@@ -75,6 +92,7 @@ export const DashboardPage = () => {
         });
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
+        setError('Failed to load dashboard data');
       } finally {
         setLoading(false);
       }
@@ -97,6 +115,19 @@ export const DashboardPage = () => {
             </Card>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-red-600">{error}</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }

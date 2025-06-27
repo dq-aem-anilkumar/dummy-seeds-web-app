@@ -56,58 +56,58 @@ const App = () => (
             </ProtectedRoute>
           }>
             {/* Super Admin Routes */}
-            <Route path="/dashboard" element={
+            <Route path="dashboard" element={
               <ProtectedRoute requiredRoles={['SUPER_ADMIN']}>
                 <DashboardPage />
               </ProtectedRoute>
             } />
-            <Route path="/create-admin" element={
+            <Route path="create-admin" element={
               <ProtectedRoute requiredRoles={['SUPER_ADMIN']}>
                 <CreateAdminPage />
               </ProtectedRoute>
             } />
-            <Route path="/master-data" element={
+            <Route path="master-data" element={
               <ProtectedRoute requiredRoles={['SUPER_ADMIN']}>
                 <MasterDataPage />
               </ProtectedRoute>
             } />
             
             {/* Admin + Super Admin Routes */}
-            <Route path="/users" element={
+            <Route path="users" element={
               <ProtectedRoute requiredRoles={['ADMIN', 'SUPER_ADMIN']}>
                 <UsersPage />
               </ProtectedRoute>
             } />
             
             {/* All Authenticated Users */}
-            <Route path="/products" element={
+            <Route path="products" element={
               <ProtectedRoute>
                 <ProductsPage />
               </ProtectedRoute>
             } />
-            <Route path="/orders" element={
+            <Route path="orders" element={
               <ProtectedRoute>
                 <OrdersPage />
               </ProtectedRoute>
             } />
-            <Route path="/profile" element={
+            <Route path="profile" element={
               <ProtectedRoute>
                 <ProfilePage />
               </ProtectedRoute>
             } />
-            <Route path="/edit-profile" element={
+            <Route path="edit-profile" element={
               <ProtectedRoute>
                 <EditProfilePage />
               </ProtectedRoute>
             } />
             
             {/* User-specific Routes */}
-            <Route path="/my-products" element={
+            <Route path="my-products" element={
               <ProtectedRoute requiredRoles={['USER']}>
                 <MyProductsPage />
               </ProtectedRoute>
             } />
-            <Route path="/my-orders" element={
+            <Route path="my-orders" element={
               <ProtectedRoute requiredRoles={['USER']}>
                 <MyOrdersPage />
               </ProtectedRoute>
