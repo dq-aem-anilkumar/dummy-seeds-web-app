@@ -14,7 +14,7 @@ export const OrdersPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const { isUser } = useAuth();
 
-  const fetchOrders = async (page = 1) => {
+  const fetchOrders = async (page = 0) => {
     try {
       setLoading(true);
       const response = await orderService.getOrders(page, 20);

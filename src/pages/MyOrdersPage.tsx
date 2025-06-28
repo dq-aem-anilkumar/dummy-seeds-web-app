@@ -19,7 +19,7 @@ export const MyOrdersPage = () => {
   const fetchMyOrders = async () => {
     try {
       setLoading(true);
-      const response = await orderService.getOrders(1, 100);
+      const response = await orderService.getOrders(0, 100);
       const userOrders = response.data || [];
       setOrders(userOrders);
 

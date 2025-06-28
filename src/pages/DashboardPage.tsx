@@ -45,9 +45,9 @@ export const DashboardPage = () => {
         
         // Fetch dashboard statistics with proper error handling
         const [productsRes, ordersRes, usersRes] = await Promise.allSettled([
-          productService.getProducts(1, 100),
-          orderService.getOrders(1, 100),
-          userService.getUsers(1, 100),
+          productService.getProducts(0, 1000),
+          orderService.getOrders(0, 1000),
+          userService.getUsers(0, 1000),
         ]);
 
         let products: any[] = [];

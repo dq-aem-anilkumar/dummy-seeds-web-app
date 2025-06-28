@@ -27,7 +27,7 @@ export const MyProductsPage = () => {
     try {
       setLoading(true);
       // Filter by current user's products (this would need backend support)
-      const response = await productService.getProducts(1, 100);
+      const response = await productService.getProducts(0, 100, '', {}, { isForUserSpecific: true });
       setProducts(response.data || []);
     } catch (error) {
       console.error('Failed to fetch products:', error);

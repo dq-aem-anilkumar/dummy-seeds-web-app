@@ -4,8 +4,8 @@ import api from './api';
 export const userService = {
   getUsers: async (page = 0, size = 10, search = '', filter = '') => {
     const params = new URLSearchParams();
-    params.append('page', page.toString());
-    params.append('size', size.toString());
+    params.append('pageNumber', page.toString());
+    params.append('pageSize', size.toString());
     
     if (search) params.append('search', search);
     if (filter && filter !== 'all') params.append('filter', filter);

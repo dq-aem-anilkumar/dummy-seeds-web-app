@@ -17,13 +17,14 @@ export const ProductsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const { user, isUser } = useAuth();
+  const API_BASE_URL = 'http://localhost:8081/uploads/images/';
 
-  const fetchProducts = async (page = 1, search = '') => {
+  const fetchProducts = async (page = 0, search = '') => {
     try {
       setLoading(true);
       const response = await productService.getProducts(page, 12, search);
       setProducts(response.data || []);
-      setTotalPages(Math.ceil((response.total || 0) / 12));
+      setTotalPages(Math.ceil((response.totalPages || 0) / 12));
       setCurrentPage(page);
     } catch (error) {
       console.error('Failed to fetch products:', error);
@@ -39,7 +40,7 @@ export const ProductsPage = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchProducts(1, searchTerm);
+    fetchProducts(0, searchTerm);
   };
 
   const handleAddToCart = async (productId: number, quantityInKg: number = 1) => {
@@ -103,9 +104,9 @@ export const ProductsPage = () => {
         {products.map((product) => (
           <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
             <div className="aspect-square bg-gray-100 flex items-center justify-center">
-              {product.image ? (
+              {product.sampleImage ? (
                 <img
-                  src={product.image}
+                  src={`${API_BASE_URL}${product.sampleImage}`}
                   alt={product.name}
                   className="w-full h-full object-cover"
                 />
