@@ -2,7 +2,7 @@
 import api from './api';
 
 export const userService = {
-  getUsers: async (page = 0, size = 10, search = '', filter = '') => {
+  getUsers: async (page, size, search = '', filter = '') => {
     const params = new URLSearchParams();
     params.append('pageNumber', page.toString());
     params.append('pageSize', size.toString());

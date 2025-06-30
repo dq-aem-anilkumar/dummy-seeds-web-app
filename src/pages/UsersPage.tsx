@@ -13,6 +13,8 @@ import { userService } from '../services/userService';
 import { useAuth } from '../hooks/useAuth';
 import { toast } from '../components/ui/use-toast';
 import { User } from '../types/auth';
+import { PaginationControls } from '@/components/PaginationControls';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 export const UsersPage = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -20,16 +22,26 @@ export const UsersPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(7);
+  const [totalRecords, setTotalRecords] = useState(0);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'view' | 'edit'>('view');
+  const [allUsers, setAllUsers] = useState<User[]>([]); // all users data for cards
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    loading: false,
+    variant: 'default' as 'default' | 'destructive'
+  });
   const { isSuperAdmin, isAdmin } = useAuth();
 
   const fetchUsers = async (page = 0, search = '', filter = '') => {
     try {
       setLoading(true);
-      const response = await userService.getUsers(page, 20, search, filter);
-      console.log('Users API Response:', response);
+      const response = await userService.getUsers(page, pageSize, search, filter);
       
       // Handle the response format with data field
       const usersData = response.data || [];
@@ -40,6 +52,7 @@ export const UsersPage = () => {
       })) : [];
       
       setUsers(transformedUsers);
+      setTotalRecords(response.totalRecords || transformedUsers.length);
       setCurrentPage(page);
     } catch (error) {
       console.error('Failed to fetch users:', error);
@@ -50,13 +63,32 @@ export const UsersPage = () => {
     }
   };
 
+  const fetchAllUsersForStats = async () => {
+    try {
+      const response = await userService.getUsers(null, null, null, null); // Call without page & size
+      const usersData = response.data || [];
+
+      const transformedUsers = Array.isArray(usersData) ? usersData.map((user: any) => ({
+        ...user,
+        userType: user.userRole?.name || 'USER',
+        profileImage: user.profileImageUrl
+      })) : [];
+
+      setAllUsers(transformedUsers);
+    } catch (error) {
+      console.error('Failed to fetch all users for stats:', error);
+    }
+  };
+
+
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    fetchUsers(currentPage, searchTerm, filterStatus);
+    fetchAllUsersForStats();
+  }, [pageSize]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchUsers(1, searchTerm, filterStatus);
+    fetchUsers(0, searchTerm, filterStatus);
   };
 
   const handleViewUser = (user: User) => {
@@ -72,31 +104,94 @@ export const UsersPage = () => {
   };
 
   const handleApproveUser = async (userId: string) => {
-    try {
-      await userService.approveUser(userId);
-      toast({ title: 'Success', description: 'User approved successfully!' });
-      fetchUsers(currentPage, searchTerm, filterStatus);
-    } catch (error) {
-      console.error('Failed to approve user:', error);
-      toast({ title: 'Error', description: 'Failed to approve user', variant: 'destructive' });
-    }
+    setConfirmDialog({
+      open: true,
+      title: 'Approve User',
+      message: 'Are you sure you want to approve this user? They will gain access to the system.',
+      loading: false,
+      variant: 'default',
+      onConfirm: async () => {
+        try {
+          setConfirmDialog(prev => ({ ...prev, loading: true }));
+          await userService.approveUser(userId);
+          toast({ title: 'Success', description: 'User approved successfully!' });
+          fetchUsers(currentPage, searchTerm, filterStatus);
+          setConfirmDialog(prev => ({ ...prev, open: false, loading: false }));
+        } catch (error) {
+          console.error('Failed to approve user:', error);
+          toast({ title: 'Error', description: 'Failed to approve user', variant: 'destructive' });
+          setConfirmDialog(prev => ({ ...prev, loading: false }));
+        }
+      }
+    });
   };
 
+  // const handleToggleUserStatus = async (user: User) => {
+    
+  //   try {
+  //     setConfirmDialog(prev => ({ ...prev, loading: true }));
+  //     await userService.updateUser({
+  //       ...user,
+  //       isActive: !user.isActive
+  //     });
+  //     toast({ 
+  //       title: 'Success', 
+  //       description: `User ${user.isActive ? 'disabled' : 'enabled'} successfully!` 
+  //     });
+  //     fetchUsers(currentPage, searchTerm, filterStatus);
+  //   } catch (error) {
+  //     console.error('Failed to update user status:', error);
+  //     toast({ title: 'Error', description: 'Failed to update user status', variant: 'destructive' });
+  //   }
+  // };
+
   const handleToggleUserStatus = async (user: User) => {
-    try {
-      await userService.updateUser({
-        ...user,
-        isActive: !user.isActive
-      });
-      toast({ 
-        title: 'Success', 
-        description: `User ${user.isActive ? 'disabled' : 'enabled'} successfully!` 
-      });
-      fetchUsers(currentPage, searchTerm, filterStatus);
-    } catch (error) {
-      console.error('Failed to update user status:', error);
-      toast({ title: 'Error', description: 'Failed to update user status', variant: 'destructive' });
-    }
+    setConfirmDialog({
+        open: true,
+        title: 'Delete User',
+        message: `Are you sure you want to disable this user? This action cannot be undone.`,
+        loading: false,
+        variant: 'destructive',
+        onConfirm: async () => {
+            try {
+                setConfirmDialog(prev => ({ ...prev, loading: true }));
+
+                // Call delete API instead of update
+                await userService.deleteUser(user.id);
+
+                toast({
+                    title: 'Success',
+                    description: 'User disabled successfully!'
+                });
+
+                // Refresh user list
+                fetchUsers(currentPage, searchTerm, filterStatus);
+
+                // Close confirmation dialog
+                setConfirmDialog(prev => ({ ...prev, open: false, loading: false }));
+
+            } catch (error) {
+                console.error('Failed to disable user:', error);
+
+                toast({
+                    title: 'Error',
+                    description: 'Failed to delete user',
+                    variant: 'destructive'
+                });
+
+                setConfirmDialog(prev => ({ ...prev, loading: false }));
+            }
+        }
+    });
+};
+
+  const handlePageChange = (page: number) => {
+    fetchUsers(page, searchTerm, filterStatus);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size); // This will automatically trigger useEffect
+    setCurrentPage(0); // Reset to first page if required
   };
 
   const getStatusBadge = (user: User) => {
@@ -110,11 +205,14 @@ export const UsersPage = () => {
   };
 
   const stats = {
-    total: users.length,
+    total: totalRecords,
     active: users.filter(u => u.isActive && u.approvalStatus).length,
     pending: users.filter(u => !u.approvalStatus).length,
     disabled: users.filter(u => !u.isActive).length,
   };
+
+  const totalPages = Math.ceil(totalRecords / pageSize);
+  
 
   if (loading) {
     return (
@@ -396,6 +494,16 @@ export const UsersPage = () => {
             )}
           </div>
         </CardContent>
+
+        {/* Pagination */}
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalRecords={totalRecords}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+        />
       </Card>
 
       <UserDialog
@@ -404,6 +512,16 @@ export const UsersPage = () => {
         user={selectedUser}
         mode={dialogMode}
         onUserUpdated={() => fetchUsers(currentPage, searchTerm, filterStatus)}
+      />
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        variant={confirmDialog.variant}
+        loading={confirmDialog.loading}
       />
     </div>
   );
