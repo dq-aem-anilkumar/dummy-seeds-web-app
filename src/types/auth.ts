@@ -16,7 +16,7 @@ export interface User {
   adhaarNumber?: string;
   userType?: 'SUPER_ADMIN' | 'ADMIN' | 'USER';
   createdAt?: string;
-  updatedAt?: string;
+  updatedAt?: string; 
 }
 
 export interface LoginCredentials {
