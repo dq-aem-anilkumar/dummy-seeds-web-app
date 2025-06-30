@@ -15,6 +15,8 @@ export interface User {
   isLoggedIn: boolean;
   adhaarNumber?: string;
   userType?: 'SUPER_ADMIN' | 'ADMIN' | 'USER';
+  createdAt?: string;
+  updatedAt?: string; 
 }
 
 export interface LoginCredentials {
