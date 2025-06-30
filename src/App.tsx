@@ -22,6 +22,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { EditProfilePage } from './pages/EditProfilePage';
 import { MasterDataPage } from './pages/MasterDataPage';
 import NotFound from "./pages/NotFound";
+import { ProductDetailPage } from "./pages/ProductDetailsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -98,6 +99,12 @@ const App = () => (
             <Route path="edit-profile" element={
               <ProtectedRoute>
                 <EditProfilePage />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="product-details" element={
+              <ProtectedRoute>
+                < ProductDetailPage/>
               </ProtectedRoute>
             } />
             

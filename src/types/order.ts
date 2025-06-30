@@ -1,5 +1,9 @@
 
 export interface OrderItem {
+  pricePerKg: number;
+  sampleImage: any;
+  productName: string;
+  imageUrl: string;
   productId: number;
   quantityInKg: number;
 }
