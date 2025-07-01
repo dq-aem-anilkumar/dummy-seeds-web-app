@@ -9,7 +9,7 @@ import { productService } from '../services/productService';
 import { toast } from '../components/ui/use-toast';
 
 interface ProductDetail {
-  id: number;
+  id: string;
   name: string;
   description: string;
   price: number;
@@ -35,31 +35,30 @@ export const ProductDetailPage = () => {
   const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
 
-  useEffect(() => {
-    if (id) {
-      fetchProductDetail(parseInt(id));
-    }
-  }, [id]);
+useEffect(() => {
+  console.log('useEffect triggered with id:', id);
+  if (id) {
+    fetchProductDetail(parseInt(id));
+  }
+}, [id]);
 
-  const fetchProductDetail = async (productId: number) => {
-    try {
-      setLoading(true);
-      const response = await productService.getProductById(parseInt(id));
-      
-      // Handle the API response structure
-      const productData = response.data.response || response.data;
-      setProduct(productData);
-    } catch (error) {
-      console.error('Failed to fetch product details:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load product details',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchProductDetail = async (productId: number) => {
+  try {
+    setLoading(true);
+    const productData = await productService.getProductById(productId); // Direct
+    setProduct(productData);
+  } catch (error) {
+    console.error('Failed to fetch product details:', error);
+    toast({
+      title: 'Error',
+      description: 'Failed to load product details',
+      variant: 'destructive',
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleAddToCart = () => {
     if (!product) return;
@@ -95,7 +94,7 @@ export const ProductDetailPage = () => {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Product Not Found</h1>
           <p className="text-gray-600 mb-4">The product you're looking for doesn't exist.</p>
-          <Button onClick={() => navigate('/dashboard/products')}>
+          <Button onClick={() => navigate('/my-products')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Products
           </Button>
@@ -110,7 +109,7 @@ export const ProductDetailPage = () => {
       <div className="flex items-center gap-4 mb-6">
         <Button
           variant="outline"
-          onClick={() => navigate('/dashboard/products')}
+          onClick={() => navigate('/my-products')}
           className="flex items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -189,9 +188,11 @@ export const ProductDetailPage = () => {
 
             {/* Price */}
             <div className="mb-6">
-              <span className="text-4xl font-bold text-gray-900">
-                ${product.price.toFixed(2)}
-              </span>
+                <span>
+                {product?.price !== undefined && product?.price !== null
+                    ? `$${product.price.toFixed(2)}`
+                    : 'Price not available'}
+                </span>
             </div>
 
             {/* Description */}

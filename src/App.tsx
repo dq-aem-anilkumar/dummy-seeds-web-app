@@ -102,7 +102,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-            <Route path="product-details" element={
+            <Route path="product-details/:id" element={
               <ProtectedRoute>
                 < ProductDetailPage/>
               </ProtectedRoute>
