@@ -9,6 +9,7 @@ import { productService } from '../services/productService';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../components/ui/use-toast';
 import { Product } from '@/types/product';
+import { PaginationControls } from '@/components/PaginationControls';
 
 export const MyProductsPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -16,7 +17,6 @@ export const MyProductsPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'view' | 'edit' | 'add'>('view');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
     title: '',
@@ -25,16 +25,21 @@ export const MyProductsPage = () => {
     loading: false,
     variant: 'default' as 'default' | 'destructive'
   });
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(5);
+  const [totalRecords, setTotalRecords] = useState(0);
 
   const API_BASE_URL = 'http://192.168.1.34:8081/uploads/images/';
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const fetchMyProducts = async () => {
+  const fetchMyProducts = async (page = 0) => {
     try {
       setLoading(true);
-      const response = await productService.getProducts(0, 100, '', {}, { isForUserSpecific: true });
+      const response = await productService.getProducts(page, pageSize, '', {}, { isForUserSpecific: true });
       setProducts(response.data || []);
+      setTotalRecords(response.totalRecords || 0);
+      setCurrentPage(page);
     } catch (error) {
       console.error('Failed to fetch products:', error);
       toast({ title: 'Error', description: 'Failed to fetch products', variant: 'destructive' });
@@ -44,8 +49,8 @@ export const MyProductsPage = () => {
   };
 
   useEffect(() => {
-    fetchMyProducts();
-  }, []);
+    fetchMyProducts(currentPage);
+  }, [currentPage, pageSize]);
 
   const handleDelete = async (productId: number) => {
     setConfirmDialog({
@@ -59,7 +64,7 @@ export const MyProductsPage = () => {
           setConfirmDialog(prev => ({ ...prev, loading: true }));
           await productService.deleteProduct(productId);
           toast({ title: 'Success', description: 'Product deleted successfully!' });
-          fetchMyProducts();
+          fetchMyProducts(currentPage);
           setConfirmDialog(prev => ({ ...prev, open: false, loading: false }));
         } catch (error) {
           console.error('Failed to delete product:', error);
@@ -87,6 +92,17 @@ export const MyProductsPage = () => {
     setDialogMode('add');
     setDialogOpen(true);
   };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(0);
+  };
+
+  const totalPages = Math.ceil(totalRecords / pageSize);
 
   return (
     <div className="space-y-6 p-6 bg-slate-50 min-h-screen">
@@ -156,12 +172,21 @@ export const MyProductsPage = () => {
         </div>
       )}
 
+      <PaginationControls
+        currentPage={currentPage}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalRecords={totalRecords}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+      />
+
       <ProductDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         product={selectedProduct}
         mode={dialogMode}
-        onProductUpdated={fetchMyProducts}
+        onProductUpdated={() => fetchMyProducts(currentPage)}
       />
 
       <ConfirmDialog

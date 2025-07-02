@@ -7,20 +7,25 @@ import { orderService } from '../services/orderService';
 import { useAuth } from '../hooks/useAuth';
 import { toast } from '../components/ui/use-toast';
 import { Order } from '../types/order';
+import { PaginationControls } from '@/components/PaginationControls';
 
 export const OrdersPage = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(5);
+  const [totalRecords, setTotalRecords] = useState(0);
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
   const { isUser } = useAuth();
+
   const API_BASE_URL = 'http://192.168.1.34:8081/uploads/images/';
 
   const fetchOrders = async (page = 0) => {
     try {
       setLoading(true);
-      const response = await orderService.getOrders(page, 20);
+      const response = await orderService.getOrders(page, pageSize);
       setOrders(response.data || []);
+      setTotalRecords(response.totalRecords || 0);
       setCurrentPage(page);
     } catch (error) {
       console.error('Failed to fetch orders:', error);
@@ -31,8 +36,17 @@ export const OrdersPage = () => {
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    fetchOrders(currentPage);
+  }, [currentPage, pageSize]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(0);
+  };
 
   const handleCancelOrder = async (orderId: number) => {
     try {
@@ -63,6 +77,8 @@ export const OrdersPage = () => {
     );
   }
 
+  const totalPages = Math.ceil(totalRecords / pageSize);
+
   return (
     <div className="space-y-6">
       <div>
@@ -77,13 +93,7 @@ export const OrdersPage = () => {
           <p className="text-gray-500">Orders will appear here once placed</p>
         </div>
       ) : (
-        <Accordion
-          type="single"
-          collapsible
-          value={openAccordion}
-          onValueChange={setOpenAccordion}
-          className="space-y-4"
-        >
+        <Accordion type="single" collapsible value={openAccordion} onValueChange={setOpenAccordion} className="space-y-4">
           {orders.map((order) => {
             const totalAmount = order.orderItems.reduce((sum, item) => {
               const price = item.pricePerKg || 0;
@@ -109,7 +119,7 @@ export const OrdersPage = () => {
                                 year: 'numeric',
                                 hour: '2-digit',
                                 minute: '2-digit',
-                                hour12: true
+                                hour12: true,
                               })
                             : 'N/A'}
                         </p>
@@ -125,7 +135,6 @@ export const OrdersPage = () => {
                       View Items
                     </AccordionTrigger>
                   </CardHeader>
-
                   <AccordionContent>
                     <CardContent className="space-y-4">
                       <div className="space-y-2">
@@ -147,7 +156,8 @@ export const OrdersPage = () => {
                                   <div className="text-sm">
                                     <p className="font-medium">{item.productName || `Product ID: ${item.productId}`}</p>
                                     <p className="text-gray-500">
-                                      Quantity: {item.quantityInKg}kg<br />
+                                      Quantity: {item.quantityInKg}kg
+                                      <br />
                                       Price: ₹{item.pricePerKg}/kg
                                     </p>
                                   </div>
@@ -160,7 +170,9 @@ export const OrdersPage = () => {
                       </div>
 
                       <div className="text-sm text-gray-600">
-                        <p><strong>Delivery Address ID:</strong> {order.deliveryAddressId || 'N/A'}</p>
+                        <p>
+                          <strong>Delivery Address ID:</strong> {order.deliveryAddressId || 'N/A'}
+                        </p>
                       </div>
 
                       <div className="flex justify-between items-center pt-4 border-t">
@@ -170,15 +182,13 @@ export const OrdersPage = () => {
 
                       <div className="flex justify-end space-x-2">
                         {order.status !== 'cancelled' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleCancelOrder(order.id)}
-                          >
+                          <Button size="sm" variant="outline" onClick={() => handleCancelOrder(order.id)}>
                             Cancel Order
                           </Button>
                         )}
-                        <Button size="sm" variant="default">Track Order</Button>
+                        <Button size="sm" variant="default">
+                          Track Order
+                        </Button>
                       </div>
                     </CardContent>
                   </AccordionContent>
@@ -188,6 +198,15 @@ export const OrdersPage = () => {
           })}
         </Accordion>
       )}
+
+      <PaginationControls
+        currentPage={currentPage}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalRecords={totalRecords}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+      />
     </div>
   );
 };

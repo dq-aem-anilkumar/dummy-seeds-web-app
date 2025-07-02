@@ -22,7 +22,7 @@ export const UsersPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize, setPageSize] = useState(7);
+  const [pageSize, setPageSize] = useState(5);
   const [totalRecords, setTotalRecords] = useState(0);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);

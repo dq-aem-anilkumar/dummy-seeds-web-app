@@ -9,20 +9,27 @@ import { useAuth } from '../hooks/useAuth';
 import { toast } from '../components/ui/use-toast';
 import { Order } from '../types/order';
 import { Product } from '../types/product';
+import { PaginationControls } from '@/components/PaginationControls';
 
 export const MyOrdersPage = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<{ [key: number]: Product }>({});
   const [loading, setLoading] = useState(true);
   const [openAccordionId, setOpenAccordionId] = useState<string>('');
+
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(5);
+  const [totalRecords, setTotalRecords] = useState(0);
+
   const { user } = useAuth();
 
-  const fetchMyOrders = async () => {
+  const fetchMyOrders = async (page = 0, size = pageSize) => {
     try {
       setLoading(true);
-      const response = await orderService.getOrders(0, 100);
+      const response = await orderService.getOrders(page, size);
       const userOrders = response.data || [];
       setOrders(userOrders);
+      setTotalRecords(response.totalRecords || 0);
 
       const productIds = new Set<number>();
       userOrders.forEach((order: Order) => {
@@ -39,26 +46,38 @@ export const MyOrdersPage = () => {
         }
       }
       setProducts(productDetails);
+      setCurrentPage(page);
     } catch (error) {
       console.error('Failed to fetch orders:', error);
-      toast({ title: 'Error', description: 'Failed to fetch orders', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch orders',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchMyOrders();
-  }, []);
+    fetchMyOrders(currentPage, pageSize);
+  }, [currentPage, pageSize]);
 
   const handleCancelOrder = async (orderId: number) => {
     try {
       await orderService.deleteOrder(orderId, 'Cancelled by customer');
-      toast({ title: 'Success', description: 'Order cancelled successfully!' });
-      fetchMyOrders();
+      toast({
+        title: 'Success',
+        description: 'Order cancelled successfully!',
+      });
+      fetchMyOrders(currentPage, pageSize);
     } catch (error) {
       console.error('Failed to cancel order:', error);
-      toast({ title: 'Error', description: 'Failed to cancel order', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: 'Failed to cancel order',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -66,18 +85,29 @@ export const MyOrdersPage = () => {
     return order.orderItems.reduce((total, item) => {
       const product = products[item.productId];
       if (product) {
-        return total + (product.pricePerKg * item.quantityInKg);
+        return total + product.pricePerKg * item.quantityInKg;
       }
       return total;
     }, 0);
   };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(0);
+  };
+
+  const totalPages = Math.ceil(totalRecords / pageSize);
 
   if (loading) {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">My Orders</h1>
         <div className="space-y-4">
-          {[...Array(3)].map((_, i) => (
+          {[...Array(pageSize)].map((_, i) => (
             <Card key={i} className="animate-pulse">
               <CardHeader>
                 <div className="h-4 bg-gray-200 rounded w-1/4"></div>
@@ -107,17 +137,10 @@ export const MyOrdersPage = () => {
           </Button>
         </div>
       ) : (
-        <Accordion
-          type="single"
-          collapsible
-          value={openAccordionId}
-          onValueChange={setOpenAccordionId}
-          className="space-y-4"
-        >
+        <Accordion type="single" collapsible value={openAccordionId} onValueChange={setOpenAccordionId} className="space-y-4">
           {orders.map((order) => {
             const orderTotal = calculateOrderTotal(order);
             const orderKey = `order-${order.id}`;
-
             return (
               <AccordionItem key={order.id} value={orderKey}>
                 <Card>
@@ -134,7 +157,7 @@ export const MyOrdersPage = () => {
                                 year: 'numeric',
                                 hour: '2-digit',
                                 minute: '2-digit',
-                                hour12: true
+                                hour12: true,
                               })
                             : 'N/A'}
                         </p>
@@ -150,7 +173,6 @@ export const MyOrdersPage = () => {
                       View Items
                     </AccordionTrigger>
                   </CardHeader>
-
                   <AccordionContent>
                     <CardContent className="space-y-4">
                       <div className="space-y-2">
@@ -160,28 +182,20 @@ export const MyOrdersPage = () => {
                             const product = products[item.productId];
                             const itemTotal = product ? product.pricePerKg * item.quantityInKg : 0;
                             return (
-                              <div
-                                key={index}
-                                className="flex justify-between items-center p-3 border rounded-md bg-gray-50"
-                              >
+                              <div key={index} className="flex justify-between items-center p-3 border rounded-md bg-gray-50">
                                 <div className="flex gap-4 items-center">
                                   <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden">
                                     {product?.image ? (
-                                      <img
-                                        src={product.image}
-                                        alt={product.name}
-                                        className="w-full h-full object-cover"
-                                      />
+                                      <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
                                     ) : (
                                       <span className="text-xl">📦</span>
                                     )}
                                   </div>
                                   <div className="text-sm">
-                                    <p className="font-medium text-gray-800">
-                                      {product?.name || `Product ID: ${item.productId}`}
-                                    </p>
+                                    <p className="font-medium text-gray-800">{product?.name || `Product ID: ${item.productId}`}</p>
                                     <p className="text-gray-500">
-                                      Quantity: {item.quantityInKg}kg<br />
+                                      Quantity: {item.quantityInKg}kg
+                                      <br />
                                       Price: ₹{product?.pricePerKg}/kg
                                     </p>
                                   </div>
@@ -192,27 +206,24 @@ export const MyOrdersPage = () => {
                           })}
                         </div>
                       </div>
-
                       <div className="text-sm text-gray-600">
-                        <p><strong>Delivery Address ID:</strong> {order.deliveryAddressId || 'N/A'}</p>
+                        <p>
+                          <strong>Delivery Address ID:</strong> {order.deliveryAddressId || 'N/A'}
+                        </p>
                       </div>
-
                       <div className="flex justify-between items-center pt-4 border-t">
                         <p className="font-semibold text-lg">Total Amount:</p>
                         <p className="text-lg font-bold text-gray-800">₹{orderTotal.toFixed(2)}</p>
                       </div>
-
                       <div className="flex justify-end space-x-2">
                         {order.status !== 'cancelled' && order.status !== 'delivered' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleCancelOrder(order.id)}
-                          >
+                          <Button size="sm" variant="outline" onClick={() => handleCancelOrder(order.id)}>
                             Cancel Order
                           </Button>
                         )}
-                        <Button size="sm" variant="default">Track Order</Button>
+                        <Button size="sm" variant="default">
+                          Track Order
+                        </Button>
                       </div>
                     </CardContent>
                   </AccordionContent>
@@ -222,6 +233,15 @@ export const MyOrdersPage = () => {
           })}
         </Accordion>
       )}
+
+      <PaginationControls
+        currentPage={currentPage}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalRecords={totalRecords}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+      />
     </div>
   );
 };

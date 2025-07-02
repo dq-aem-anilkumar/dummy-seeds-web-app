@@ -21,7 +21,7 @@ export const PaginationControls = ({
   totalRecords,
   onPageChange,
   onPageSizeChange,
-  pageSizeOptions = [7, 50, 100],
+  pageSizeOptions = [5, 25, 50, 100],
   showPageSizeSelector = true
 }: PaginationControlsProps) => {
   const startRecord = currentPage * pageSize + 1;
