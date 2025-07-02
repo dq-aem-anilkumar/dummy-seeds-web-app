@@ -12,12 +12,14 @@ import { toast } from '../components/ui/use-toast';
 
 export const EditProfilePage = () => {
   const [formData, setFormData] = useState({
+    id: '',
     name: '',
     email: '',
     mobileNumber: '',
     adhaarNumber: '',
     profileImage: null as File | null,
   });
+
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const dispatch = useDispatch();
@@ -26,6 +28,7 @@ export const EditProfilePage = () => {
   useEffect(() => {
     if (user) {
       setFormData({
+        id: user.id || '',
         name: user.name || '',
         email: user.email || '',
         mobileNumber: user.mobileNumber || '',
@@ -37,25 +40,19 @@ export const EditProfilePage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!formData.name || !formData.email || !formData.mobileNumber) {
-      toast({ title: 'Error', description: 'Please fill in required fields', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: 'Please fill in required fields',
+        variant: 'destructive',
+      });
       return;
     }
 
     try {
       setLoading(true);
-      const updateData = new FormData();
-      updateData.append('name', formData.name);
-      updateData.append('email', formData.email);
-      updateData.append('mobileNumber', formData.mobileNumber);
-      if (formData.adhaarNumber) {
-        updateData.append('adhaarNumber', formData.adhaarNumber);
-      }
-      if (formData.profileImage) {
-        updateData.append('profileImage', formData.profileImage);
-      }
-
-      await dispatch(updateProfile(updateData) as any);
+      await dispatch(updateProfile(formData) as any);
       toast({ title: 'Success', description: 'Profile updated successfully!' });
       navigate('/profile');
     } catch (error) {
@@ -92,11 +89,7 @@ export const EditProfilePage = () => {
             <div className="flex items-center space-x-4">
               <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center">
                 {user?.profileImage ? (
-                  <img
-                    src={user.profileImage}
-                    alt="Profile"
-                    className="w-20 h-20 rounded-full object-cover"
-                  />
+                  <img src={user.profileImage} alt="Profile" className="w-20 h-20 rounded-full object-cover" />
                 ) : (
                   <span className="text-2xl font-medium">
                     {user?.name?.charAt(0).toUpperCase()}
@@ -106,7 +99,7 @@ export const EditProfilePage = () => {
               <div className="space-y-2">
                 <Label htmlFor="profileImage">Profile Image</Label>
                 <Input
-                  id="profileImage" 
+                  id="profileImage"
                   name="profileImage"
                   type="file"
                   accept="image/*"
@@ -119,43 +112,19 @@ export const EditProfilePage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name *</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                />
+                <Input id="name" name="name" value={formData.name} onChange={handleChange} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                />
+                <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="mobileNumber">Mobile Number *</Label>
-                <Input
-                  id="mobileNumber"
-                  name="mobileNumber"
-                  value={formData.mobileNumber}
-                  onChange={handleChange}
-                  required
-                />
+                <Input id="mobileNumber" name="mobileNumber" value={formData.mobileNumber} onChange={handleChange} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="adhaarNumber">Aadhaar Number</Label>
-                <Input
-                  id="adhaarNumber"
-                  name="adhaarNumber"
-                  value={formData.adhaarNumber}
-                  onChange={handleChange}
-                />
+                <Input id="adhaarNumber" name="adhaarNumber" value={formData.adhaarNumber} onChange={handleChange} />
               </div>
             </div>
 
@@ -164,11 +133,7 @@ export const EditProfilePage = () => {
               <Button type="submit" disabled={loading}>
                 {loading ? 'Updating...' : 'Update Profile'}
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate('/profile')}
-              >
+              <Button type="button" variant="outline" onClick={() => navigate('/profile')}>
                 Cancel
               </Button>
             </div>
