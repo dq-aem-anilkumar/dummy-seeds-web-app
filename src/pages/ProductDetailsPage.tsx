@@ -7,6 +7,7 @@ import { ArrowLeft, ShoppingCart, Star, Package, Truck, Shield, Heart } from 'lu
 import { productService } from '../services/productService';
 import { toast } from '../components/ui/use-toast';
 import { useCart } from '../contexts/CartContext';
+import { useAuth } from '../hooks/useAuth';
 
 export const ProductDetailPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -16,6 +17,7 @@ export const ProductDetailPage = () => {
     const [quantity, setQuantity] = useState(1);
     const [isWishlisted, setIsWishlisted] = useState(false);
     const { addToCart } = useCart();
+    const { isUser } = useAuth();
 
     const API_BASE_URL = 'http://192.168.1.31:8081/uploads/images/';
 
@@ -172,15 +174,17 @@ export const ProductDetailPage = () => {
                             </div>
                         </div>
 
-                        <div className="flex gap-4 mb-6">
+                        {isUser() && (
+                          <div className="flex gap-4 mb-6">
                             <Button className="flex-1" onClick={handleAddToCart} disabled={isOutOfStock}>
-                                <ShoppingCart className="h-4 w-4 mr-2" />
-                                {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+                              <ShoppingCart className="h-4 w-4 mr-2" />
+                              {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
                             </Button>
                             <Button variant="outline" onClick={handleWishlist} className={isWishlisted ? 'text-red-600 border-red-600' : ''}>
-                                <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
+                              <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
                             </Button>
-                        </div>
+                          </div>
+                        )}
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
                             <div className="flex items-center gap-2"><Truck className="h-4 w-4" /> Free Shipping</div>
