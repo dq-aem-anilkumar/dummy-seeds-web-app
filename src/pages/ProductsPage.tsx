@@ -1,36 +1,50 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from '../components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { productService } from '../services/productService';
-import { orderService } from '../services/orderService';
 import { useAuth } from '../hooks/useAuth';
 import { toast } from '../components/ui/use-toast';
 import { Product } from '../types/product';
 import { Link } from 'react-router-dom';
-import { Heart } from 'lucide-react';
+import { Heart, ShoppingCart, Plus, Minus } from 'lucide-react';
+import { useCart } from '../contexts/CartContext';
+
+const API_BASE_URL = 'http://192.168.1.34:8081/uploads/images/';
+
+// Debounce hook
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+  return debouncedValue;
+};
 
 export const ProductsPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [wishlist, setWishlist] = useState<Set<number>>(new Set());
-
+  const [quantities, setQuantities] = useState<Record<number, number>>({});
   const { user, isUser } = useAuth();
-  const API_BASE_URL = 'http://192.168.1.34:8081/uploads/images/';
+  const { addToCart } = useCart();
 
-  const fetchProducts = async (page = 0, search = '') => {
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
+  const fetchProducts = async (page = 0, search = '', filters = {}) => {
     try {
       setLoading(true);
-      const response = await productService.getProducts(page, 12, search);
+      const response = await productService.getProducts(page, 12, search, filters);
       setProducts(response.data || []);
       setTotalPages(Math.ceil((response.totalPages || 0) / 12));
       setCurrentPage(page);
@@ -39,7 +53,8 @@ export const ProductsPage = () => {
       toast({
         title: 'Error',
         description: 'Failed to fetch products',
-        variant: 'destructive'
+        variant: 'destructive',
+        duration: 3000,
       });
     } finally {
       setLoading(false);
@@ -47,68 +62,68 @@ export const ProductsPage = () => {
   };
 
   useEffect(() => {
+    fetchProducts(0, debouncedSearchTerm);
+  }, [debouncedSearchTerm]);
+
+  useEffect(() => {
     fetchProducts();
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchProducts(0, searchTerm);
+    const minPriceNum = parseFloat(minPrice) || 0;
+    const maxPriceNum = parseFloat(maxPrice) || Infinity;
+    if (minPrice && maxPrice && minPriceNum > maxPriceNum) {
+      toast({
+        title: 'Invalid Price Range',
+        description: 'Maximum price should be greater than minimum price',
+        variant: 'destructive',
+        duration: 3000,
+      });
+      return;
+    }
+
+    const filters = {
+      minPrice: minPrice ? minPriceNum : undefined,
+      maxPrice: maxPrice ? maxPriceNum : undefined,
+    };
+
+    fetchProducts(0, searchTerm, filters);
   };
 
-  const handleAddToCart = async (productId: number, quantityInKg: number = 1) => {
+  const handleQuantityChange = (productId: number, change: number) => {
+    setQuantities(prev => {
+      const currentQuantity = prev[productId] || 1;
+      const newQuantity = Math.max(0.1, currentQuantity + change);
+      return { ...prev, [productId]: Math.round(newQuantity * 10) / 10 };
+    });
+  };
+
+  const handleAddToCart = (product: Product) => {
     if (!user) return;
 
-    try {
-      const orderData = {
-        deliveryAddressId: 1,
-        orderItems: [{ productId, quantityInKg }]
-      };
+    const quantity = quantities[product.id] || 1;
+    const result = addToCart(product, quantity);
 
-      await orderService.createOrder(orderData, user.id);
-      toast({
-        title: 'Success',
-        description: 'Product added to cart successfully!'
-      });
-    } catch (error) {
-      console.error('Failed to add to cart:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to add product to cart',
-        variant: 'destructive'
-      });
-    }
+    toast({
+      title: result.success ? 'Added to Cart!' : 'Error',
+      description: result.message,
+      variant: result.success ? 'default' : 'destructive',
+      duration: 3000,
+    });
   };
 
   const toggleWishlist = (productId: number) => {
     const updatedWishlist = new Set(wishlist);
     if (wishlist.has(productId)) {
       updatedWishlist.delete(productId);
-      toast({ title: 'Removed', description: 'Removed from wishlist.' });
+      toast({ title: 'Removed', description: 'Removed from wishlist.', duration: 3000 });
     } else {
       updatedWishlist.add(productId);
-      toast({ title: 'Wishlisted', description: 'Added to your wishlist!' });
+      toast({ title: 'Wishlisted', description: 'Added to your wishlist!', duration: 3000 });
     }
     setWishlist(updatedWishlist);
   };
-
-  if (loading) {
-    return (
-      <div className="space-y-6 px-4">
-        <h1 className="text-2xl font-bold text-gray-900">Loading Products...</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {[...Array(8)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <div className="aspect-square bg-gray-200 rounded-t-lg"></div>
-              <CardHeader>
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 px-4 pb-10">
@@ -120,82 +135,75 @@ export const ProductsPage = () => {
       </div>
 
       <form onSubmit={handleSearch} className="flex flex-wrap gap-2 items-center">
-        <Input
-          placeholder="Search products..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full sm:w-64"
-        />
+        <Input placeholder="Search products..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full sm:w-64" />
+        <Input type="number" placeholder="Min Price" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} className="w-24" />
+        <Input type="number" placeholder="Max Price" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} className="w-24" />
         <Button type="submit">🔍 Search</Button>
       </form>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {products.map((product) => {
-          const isWishlisted = wishlist.has(product.id);
-          return (
-            <Card
-              key={product.id}
-              className="overflow-hidden border rounded-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]"
-            >
-              <Link to={`/product-details/${product.id}`}>
-                <div className="relative aspect-square bg-gray-100 group-hover:brightness-90 transition-all duration-300">
-                  {product.sampleImage ? (
-                    <img
-                      src={`${API_BASE_URL}${product.sampleImage}`}
-                      alt={product.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-5xl text-gray-400">
-                      📦
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {[...Array(8)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <div className="aspect-square bg-gray-200 rounded-t-lg"></div>
+              <CardHeader>
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {products.map((product) => {
+            const isWishlisted = wishlist.has(product.id);
+            return (
+              <Card key={product.id} className="overflow-hidden border rounded-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]">
+                <Link to={`/product-details/${product.id}`}>
+                  <div className="relative aspect-square bg-gray-100 group-hover:brightness-90 transition-all duration-300">
+                    {product.sampleImage ? (
+                      <img src={`${API_BASE_URL}${product.sampleImage}`} alt={product.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-5xl text-gray-400">📦</div>
+                    )}
+                  </div>
+                  <CardHeader className="space-y-2 px-4 pt-4">
+                    <CardTitle className="text-xl font-semibold">{product.name}</CardTitle>
+                    <CardDescription className="text-gray-600 line-clamp-2">{product.description || 'No description available'}</CardDescription>
+                  </CardHeader>
+                </Link>
+
+                <CardContent className="px-4 pb-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-blue-600 font-bold text-lg">₹{product.pricePerKg}/kg</span>
+                    <span className="text-sm text-gray-500">{product.remainingQuantityKg}kg in stock</span>
+                  </div>
+
+                  {isUser() && (
+                    <div className="flex gap-2 mt-2">
+                      <Button onClick={() => handleQuantityChange(product.id, -0.1)} variant="outline" className="w-9 h-9 flex items-center justify-center">-</Button>
+                      <span className="flex items-center justify-center w-12">{quantities[product.id] || 1}kg</span>
+                      <Button onClick={() => handleQuantityChange(product.id, 0.1)} variant="outline" className="w-9 h-9 flex items-center justify-center">+</Button>
                     </div>
                   )}
-                </div>
 
-                <CardHeader className="space-y-2 px-4 pt-4">
-                  <CardTitle className="text-xl font-semibold">{product.name}</CardTitle>
-                  <CardDescription className="text-gray-600 line-clamp-2">
-                    {product.description || 'No description available'}
-                  </CardDescription>
-                </CardHeader>
-              </Link>
+                  {isUser() && (
+                    <div className="flex gap-2 mt-2">
+                      <Button onClick={() => handleAddToCart(product)} className="w-full" disabled={product.remainingQuantityKg === 0}>
+                        {product.remainingQuantityKg === 0 ? 'Out of Stock' : '🛒 Add to Cart'}
+                      </Button>
 
-              <CardContent className="px-4 pb-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-green-600 font-bold text-lg">
-                    ₹{product.pricePerKg}/kg
-                  </span>
-                  <span className="text-sm text-gray-500">
-                    {product.quantityKg}kg in stock
-                  </span>
-                </div>
-
-                {isUser() && (
-                  <div className="flex gap-2 mt-2">
-                    <Button
-                      onClick={() => handleAddToCart(product.id)}
-                      className="w-full"
-                      disabled={product.quantityKg === 0}
-                    >
-                      {product.quantityKg === 0 ? '❌ Out of Stock' : '🛒 Add to Cart'}
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      onClick={() => toggleWishlist(product.id)}
-                      className={`rounded-full w-9 h-9 flex items-center justify-center transition-all duration-200 ${
-                        isWishlisted ? 'text-red-600 border-blue-600' : ''
-                      }`}
-                    >
-                      <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                      <Button variant="outline" onClick={() => toggleWishlist(product.id)} className={`rounded-full w-9 h-9 flex items-center justify-center transition-all duration-200 ${isWishlisted ? 'text-red-600 border-blue-600' : ''}`}>
+                        <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       {products.length === 0 && (
         <div className="text-center py-12">
@@ -207,23 +215,9 @@ export const ProductsPage = () => {
 
       {totalPages > 1 && (
         <div className="flex justify-center items-center gap-3 mt-6">
-          <Button
-            variant="outline"
-            onClick={() => fetchProducts(currentPage - 1, searchTerm)}
-            disabled={currentPage === 1}
-          >
-            ← Prev
-          </Button>
-          <span className="text-sm text-gray-600 font-medium">
-            Page {currentPage} of {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            onClick={() => fetchProducts(currentPage + 1, searchTerm)}
-            disabled={currentPage === totalPages}
-          >
-            Next →
-          </Button>
+          <Button variant="outline" onClick={() => fetchProducts(currentPage - 1, searchTerm)} disabled={currentPage === 1}>← Prev</Button>
+          <span className="text-sm text-gray-600 font-medium">Page {currentPage} of {totalPages}</span>
+          <Button variant="outline" onClick={() => fetchProducts(currentPage + 1, searchTerm)} disabled={currentPage === totalPages}>Next →</Button>
         </div>
       )}
     </div>

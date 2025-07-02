@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { DashboardLayout } from './components/Layout/DashboardLayout';
+import { Provider } from 'react-redux';
+import { store } from './store';
 
 // Pages
 import { LoginPage } from './pages/LoginPage';
@@ -23,6 +25,7 @@ import { EditProfilePage } from './pages/EditProfilePage';
 import { MasterDataPage } from './pages/MasterDataPage';
 import NotFound from "./pages/NotFound";
 import { ProductDetailPage } from "./pages/ProductDetailsPage";
+import { CartProvider } from "./contexts/CartContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,7 +42,9 @@ const queryClient = new QueryClient({
 });
 
 const App = () => (
+  <Provider store={store}>
   <QueryClientProvider client={queryClient}>
+    <CartProvider>
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -129,7 +134,9 @@ const App = () => (
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
+    </CartProvider>
   </QueryClientProvider>
+  </Provider>
 );
 
 export default App;

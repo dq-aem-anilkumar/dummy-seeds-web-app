@@ -20,6 +20,8 @@ interface AuthState {
     isDeleted: boolean;
     isLoggedIn: boolean;
     adhaarNumber: string;
+    createdAt: string;
+    updatedAt: string;
   } | null;
   token: string | null;
   isAuthenticated: boolean;
@@ -72,7 +74,9 @@ export const loginUser = createAsyncThunk(
         isActive: true,
         isDeleted: false,
         isLoggedIn: true,
-        adhaarNumber: ''
+        adhaarNumber: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
       
       localStorage.setItem('user', JSON.stringify(user));
@@ -108,6 +112,10 @@ const authSlice = createSlice({
     },
     clearError: (state) => {
       state.error = null;
+    },
+    setUser: (state, action) => {
+      state.user = action.payload;
+      localStorage.setItem('user', JSON.stringify(action.payload));
     },
     updateUserData: (state, action) => {
       if (state.user) {
@@ -169,5 +177,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, clearError, updateUserData } = authSlice.actions;
+export const { logout, clearError, setUser, updateUserData } = authSlice.actions;
 export default authSlice.reducer;

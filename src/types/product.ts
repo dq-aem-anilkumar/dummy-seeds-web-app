@@ -4,6 +4,7 @@ export interface Product {
   name: string;
   description?: string;
   quantityKg: number;
+  remainingQuantityKg: number; // For displaying available stock
   pricePerKg: number;
   image: string;
   sampleImage?: string;
