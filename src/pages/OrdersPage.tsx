@@ -12,8 +12,9 @@ export const OrdersPage = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [openAccordion, setOpenAccordion] = useState<string | null>(null);
   const { isUser } = useAuth();
-  const API_BASE_URL = 'http://192.168.1.38:8081/uploads/images/';
+  const API_BASE_URL = 'http://192.168.1.34:8081/uploads/images/';
 
   const fetchOrders = async (page = 0) => {
     try {
@@ -76,7 +77,13 @@ export const OrdersPage = () => {
           <p className="text-gray-500">Orders will appear here once placed</p>
         </div>
       ) : (
-        <Accordion type="multiple" className="space-y-4">
+        <Accordion
+          type="single"
+          collapsible
+          value={openAccordion}
+          onValueChange={setOpenAccordion}
+          className="space-y-4"
+        >
           {orders.map((order) => {
             const totalAmount = order.orderItems.reduce((sum, item) => {
               const price = item.pricePerKg || 0;
@@ -84,22 +91,34 @@ export const OrdersPage = () => {
               return sum + price * quantity;
             }, 0);
 
+            const orderKey = `order-${order.id}`;
+
             return (
-              <AccordionItem key={order.id} value={`order-${order.id}`}>
+              <AccordionItem key={order.id} value={orderKey}>
                 <Card>
                   <CardHeader className="bg-gray-50 rounded-t-lg p-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle className="text-lg font-semibold">Order #{order.id}</CardTitle>
                         <p className="text-sm text-gray-600">
-                          Placed on {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}
+                          Placed on{' '}
+                          {order.createdAt
+                            ? new Date(order.createdAt).toLocaleString('en-IN', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true
+                              })
+                            : 'N/A'}
                         </p>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Badge variant={order.status === 'cancelled' ? 'destructive' : 'default'}>
                           {order.status || 'Pending'}
                         </Badge>
-                        <Badge variant="secondary">${totalAmount.toFixed(2)}</Badge>
+                        <Badge variant="secondary">₹{totalAmount.toFixed(2)}</Badge>
                       </div>
                     </div>
                     <AccordionTrigger className="w-full text-left mt-4 text-sm text-gray-600 hover:text-black transition">
@@ -121,7 +140,7 @@ export const OrdersPage = () => {
                               >
                                 <div className="flex gap-4 items-center">
                                   <img
-                                     src={`${API_BASE_URL}${item.sampleImage}`}
+                                    src={`${API_BASE_URL}${item.sampleImage}`}
                                     alt={item.productName || 'Product'}
                                     className="w-12 h-12 object-cover rounded"
                                   />

@@ -16,6 +16,7 @@ export const MyProductsPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'view' | 'edit' | 'add'>('view');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
     title: '',
@@ -25,7 +26,7 @@ export const MyProductsPage = () => {
     variant: 'default' as 'default' | 'destructive'
   });
 
-  const API_BASE_URL = 'http://localhost:8081/uploads/images/';
+  const API_BASE_URL = 'http://192.168.1.34:8081/uploads/images/';
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -139,7 +140,7 @@ export const MyProductsPage = () => {
             <h3 className="mt-2 font-semibold text-lg text-gray-800 truncate">{product.name}</h3>
             <p className="text-gray-500 text-sm mb-2 line-clamp-2">{product.description || 'No description'}</p>
             <div className="flex justify-between text-sm text-gray-700">
-              <span>Price: ${product.pricePerKg}/kg</span>
+              <span>Price: ₹{product.pricePerKg}/kg</span>
               <span>Qty: {product.quantityKg}kg</span>
             </div>
           </Card>
@@ -160,7 +161,7 @@ export const MyProductsPage = () => {
         onOpenChange={setDialogOpen}
         product={selectedProduct}
         mode={dialogMode}
-        onProductSaved={fetchMyProducts}
+        onProductUpdated={fetchMyProducts}
       />
 
       <ConfirmDialog
