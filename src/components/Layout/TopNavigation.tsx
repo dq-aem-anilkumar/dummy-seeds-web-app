@@ -160,14 +160,14 @@ export const TopNavigation = () => {
           </DropdownMenu>
 
           {/* Settings */}
-          <Button 
+          {/* <Button 
             variant="ghost" 
             size="icon" 
             className="hover:bg-slate-100"
             onClick={handleSettingsClick}
           >
             <Settings className="h-5 w-5 text-slate-600" />
-          </Button>
+          </Button> */}
 
           {/* User Menu */}
           <DropdownMenu>

@@ -13,7 +13,6 @@ import { PaginationControls } from '@/components/PaginationControls';
 
 const API_BASE_URL = 'http://192.168.1.34:8081/uploads/images/';
 
-// Debounce hook
 const useDebounce = (value, delay) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
   useEffect(() => {
@@ -34,7 +33,7 @@ export const ProductsPage = () => {
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(25);
   const [totalRecords, setTotalRecords] = useState(0);
   const [wishlist, setWishlist] = useState<Set<number>>(new Set());
   const [quantities, setQuantities] = useState<Record<number, number>>({});
@@ -63,7 +62,6 @@ export const ProductsPage = () => {
     }
   };
 
-  // Main API trigger
   useEffect(() => {
     fetchProducts(currentPage, debouncedSearchTerm);
   }, [debouncedSearchTerm, pageSize, currentPage]);
@@ -106,6 +104,13 @@ export const ProductsPage = () => {
       const newQuantity = Math.max(0.1, currentQuantity + change);
       return { ...prev, [productId]: Math.round(newQuantity * 10) / 10 };
     });
+  };
+
+  const handleManualQuantityChange = (productId: number, value: string) => {
+    const parsed = parseFloat(value);
+    if (!isNaN(parsed)) {
+      setQuantities(prev => ({ ...prev, [productId]: Math.max(0.1, parsed) }));
+    }
   };
 
   const handleAddToCart = (product: Product) => {
@@ -191,11 +196,9 @@ export const ProductsPage = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {products.map((product) => {
             const isWishlisted = wishlist.has(product.id);
+            const quantity = quantities[product.id] || 1;
             return (
-              <Card
-                key={product.id}
-                className="overflow-hidden border rounded-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]"
-              >
+              <Card key={product.id} className="overflow-hidden border rounded-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]">
                 <Link to={`/product-details/${product.id}`}>
                   <div className="relative aspect-square bg-gray-100 group-hover:brightness-90 transition-all duration-300">
                     {product.sampleImage ? (
@@ -205,9 +208,7 @@ export const ProductsPage = () => {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="flex items-center justify-center h-full text-5xl text-gray-400">
-                        📦
-                      </div>
+                      <div className="flex items-center justify-center h-full text-5xl text-gray-400">📦</div>
                     )}
                   </div>
                   <CardHeader className="space-y-2 px-4 pt-4">
@@ -224,45 +225,42 @@ export const ProductsPage = () => {
                   </div>
 
                   {isUser() && (
-                    <div className="flex gap-2 mt-2">
-                      <Button
-                        onClick={() => handleQuantityChange(product.id, -0.1)}
-                        variant="outline"
-                        className="w-9 h-9 flex items-center justify-center"
-                      >
-                        -
-                      </Button>
-                      <span className="flex items-center justify-center w-12">
-                        {quantities[product.id] || 1}kg
-                      </span>
-                      <Button
-                        onClick={() => handleQuantityChange(product.id, 0.1)}
-                        variant="outline"
-                        className="w-9 h-9 flex items-center justify-center"
-                      >
-                        +
-                      </Button>
-                    </div>
-                  )}
+                    <div className="flex flex-col gap-2 mt-2">
+                      <div className="flex items-center gap-2">
+                        <label
+                          htmlFor={`quantity-${product.id}`}
+                          className="text-sm font-medium text-gray-700"
+                        >
+                          Quantity:
+                        </label>
+                        <Input
+                          id={`quantity-${product.id}`}
+                          name="quantity"
+                          type="number"
+                          step="0.1"
+                          min="0.1"
+                          className="w-16 text-center"
+                          value={quantities[product.id] || 1}
+                          onChange={(e) => handleManualQuantityChange(product.id, e.target.value)}
+                        />
+                      </div>
 
-                  {isUser() && (
-                    <div className="flex gap-2 mt-2">
-                      <Button
-                        onClick={() => handleAddToCart(product)}
-                        className="w-full"
-                        disabled={product.remainingQuantityKg === 0}
-                      >
-                        {product.remainingQuantityKg === 0 ? 'Out of Stock' : '🛒 Add to Cart'}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => toggleWishlist(product.id)}
-                        className={`rounded-full w-9 h-9 flex items-center justify-center transition-all duration-200 ${
-                          isWishlisted ? 'text-red-600 border-blue-600' : ''
-                        }`}
-                      >
-                        <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => handleAddToCart(product)}
+                          className="w-full"
+                          disabled={product.remainingQuantityKg === 0}
+                        >
+                          {product.remainingQuantityKg === 0 ? 'Out of Stock' : '🛒 Add to Cart'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => toggleWishlist(product.id)}
+                          className={`rounded-full w-9 h-9 flex items-center justify-center transition-all duration-200 ${isWishlisted ? 'text-red-600 border-blue-600' : ''}`}
+                        >
+                          <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </CardContent>

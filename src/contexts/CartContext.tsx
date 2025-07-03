@@ -6,6 +6,7 @@ import { Product } from '../types/product';
 import { useAuth } from '../hooks/useAuth';
 
 export interface CartItem {
+  remainingQuantityKg: number;
   id: number;
   name: string;
   pricePerKg: number;

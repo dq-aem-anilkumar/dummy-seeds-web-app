@@ -8,7 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { orderService } from '../services/orderService';
 import { toast } from './ui/use-toast';
 
-const API_BASE_URL = 'http://localhost:8081/uploads/images/';
+const API_BASE_URL = 'http://192.168.1.34:8081/uploads/images/';
 
 interface CartDrawerProps {
   open: boolean;
