@@ -1,9 +1,15 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { useNavigate } from 'react-router-dom';
+
+import {
+  Card, CardContent, CardDescription, CardHeader, CardTitle
+} from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from '../components/ui/select';
 
 import { toast } from '../components/ui/use-toast';
 import { Loader2, UserCheck, Send } from 'lucide-react';
@@ -17,6 +23,7 @@ export const ImpersonationPage = () => {
   const [step, setStep] = useState<'request' | 'verify'>('request');
   const [loading, setLoading] = useState(false);
   const { startImpersonation } = useImpersonation();
+  const navigate = useNavigate();
 
   const handleRequestOTP = async () => {
     if (!userId.trim()) {
@@ -84,6 +91,10 @@ export const ImpersonationPage = () => {
           title: 'Success',
           description: `Now impersonating ${userName}`,
         });
+
+        setTimeout(() => {
+          navigate('/products');
+        }, 100);
       } else {
         toast({
           title: 'Error',
