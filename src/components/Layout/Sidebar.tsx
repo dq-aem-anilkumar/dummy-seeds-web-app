@@ -16,7 +16,7 @@ const sidebarItems = {
   ADMIN: [
     { title: 'Users', path: '/users', icon: Users },
     { title: 'Products', path: '/products', icon: Package },
-    { title: 'Orders', path: '/orders', icon: ShoppingCart },
+    { title: 'Impersonation', path: '/impersonation', icon: ShoppingCart },
   ],
   USER: [
     { title: 'Products', path: '/products', icon: Package },

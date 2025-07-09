@@ -26,6 +26,8 @@ import { MasterDataPage } from './pages/MasterDataPage';
 import NotFound from "./pages/NotFound";
 import { ProductDetailPage } from "./pages/ProductDetailsPage";
 import { CartProvider } from "./contexts/CartContext";
+import { ImpersonationProvider } from "./contexts/src/contexts/ImpersonationContext";
+import { ImpersonationPage } from "./pages/ImpersonationPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,6 +47,7 @@ const App = () => (
   <Provider store={store}>
   <QueryClientProvider client={queryClient}>
     <CartProvider>
+      <ImpersonationProvider>
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -82,6 +85,12 @@ const App = () => (
             <Route path="users" element={
               <ProtectedRoute requiredRoles={['ADMIN', 'SUPER_ADMIN']}>
                 <UsersPage />
+              </ProtectedRoute>
+            } />
+
+            <Route path="impersonation" element={
+              <ProtectedRoute requiredRoles={['ADMIN']}>
+                <ImpersonationPage />
               </ProtectedRoute>
             } />
             
@@ -134,6 +143,7 @@ const App = () => (
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
+    </ImpersonationProvider>
     </CartProvider>
   </QueryClientProvider>
   </Provider>
