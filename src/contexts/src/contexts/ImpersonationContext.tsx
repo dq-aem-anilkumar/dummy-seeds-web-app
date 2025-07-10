@@ -1,9 +1,9 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { toast } from '@/components/ui/use-toast';
 import { impersonationService } from '@/services/src/services/impersonationService';
 import { setUser } from '@/store/authSlice';
+import axios from 'axios';
 
 interface ImpersonationContextType {
   isImpersonating: boolean;
@@ -32,25 +32,22 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
   const dispatch = useDispatch();
 
   useEffect(() => {
-    // Check if we're already impersonating on app load
     const impersonationData = localStorage.getItem('impersonation_data');
     if (impersonationData) {
-      const { user, originalToken: storedOriginalToken } = JSON.parse(impersonationData);
+      const { user, originalToken: storedToken } = JSON.parse(impersonationData);
       setIsImpersonating(true);
       setImpersonatedUser(user);
-      setOriginalToken(storedOriginalToken);
+      setOriginalToken(storedToken);
       dispatch(setUser(user));
       startSessionTimer();
     }
   }, [dispatch]);
 
   const startSessionTimer = () => {
-    // Clear existing timer
     if (sessionTimer) {
       clearTimeout(sessionTimer);
     }
 
-    // Set timer for 10 seconds before token expiry (assuming 1 hour token)
     const timer = setTimeout(() => {
       showExtensionDialog();
     }, 50 * 60 * 1000); // 50 minutes
@@ -72,23 +69,29 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const startImpersonation = (userData: any, newToken: string) => {
     const currentToken = localStorage.getItem('token');
-    
+    const currentUser = localStorage.getItem('user');
+
     setOriginalToken(currentToken);
     setIsImpersonating(true);
     setImpersonatedUser(userData);
-    
+
     // Store impersonation data
-    localStorage.setItem('impersonation_data', JSON.stringify({
-      user: userData,
-      originalToken: currentToken
-    }));
-    
-    // Update token and user in store
+    localStorage.setItem(
+      'impersonation_data',
+      JSON.stringify({
+        user: userData,
+        originalToken: currentToken,
+        originalUser: currentUser,
+      })
+    );
+
+    // Switch token and user
     localStorage.setItem('token', newToken);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
     dispatch(setUser(userData));
-    
+
     startSessionTimer();
-    
+
     toast({
       title: 'Impersonation Started',
       description: `You are now impersonating ${userData.name}`,
@@ -98,34 +101,43 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
   const exitImpersonation = async () => {
     try {
       const response = await impersonationService.exitImpersonation();
-      
-      if (response.accessToken && originalToken) {
-        // Restore original token
-        localStorage.setItem('token', response.accessToken);
-        
-        // Get original user data from token or restore from backup
-        const originalUser = localStorage.getItem('original_user');
-        if (originalUser) {
-          dispatch(setUser(JSON.parse(originalUser)));
+
+      if (response.data) {
+        // Restore token
+        localStorage.setItem('token', response.data);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${response.data}`;
+
+        // Restore full original user
+        const impersonationData = localStorage.getItem('impersonation_data');
+        if (impersonationData) {
+          const { originalUser } = JSON.parse(impersonationData);
+          if (originalUser) {
+            dispatch(setUser(JSON.parse(originalUser)));
+            localStorage.setItem('user', originalUser);
+          }
         }
       }
-      
-      // Clear impersonation state
+
+      // Cleanup
       setIsImpersonating(false);
       setImpersonatedUser(null);
       setOriginalToken(null);
       localStorage.removeItem('impersonation_data');
-      
+
       if (sessionTimer) {
         clearTimeout(sessionTimer);
         setSessionTimer(null);
       }
-      
+
       toast({
         title: 'Impersonation Ended',
         description: 'You have returned to your original account',
       });
-      
+
+      // Force app reload to refresh all state (sidebar, permissions, etc.)
+      localStorage.removeItem('persist:root'); // optional if using redux-persist
+      window.location.href = '/'; // or route to /dashboard, etc.
+
     } catch (error) {
       console.error('Failed to exit impersonation:', error);
       toast({
@@ -139,8 +151,8 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
   const extendSession = async () => {
     try {
       await impersonationService.extendSession();
-      startSessionTimer(); // Restart the timer
-      
+      startSessionTimer();
+
       toast({
         title: 'Session Extended',
         description: 'Your impersonation session has been extended',
