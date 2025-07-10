@@ -2,8 +2,16 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopNavigation } from './TopNavigation';
 import { ImpersonationBanner } from '../src/components/ImpersonationBanner';
+import { useImpersonation } from '@/contexts/src/contexts/ImpersonationContext';
 
 export const DashboardLayout = () => {
+  const { isImpersonating, impersonatedUser } = useImpersonation();
+
+  // Base header height is ~4rem, banner adds ~2.5rem
+  // When impersonating: pt-[6.5rem] ensures enough room for TopNav + Banner.
+  // When not impersonating: only pt-[4rem] is applied to account for TopNav.
+  const topPadding = isImpersonating && impersonatedUser ? 'pt-[6.5rem]' : 'pt-[4rem]';
+
   return (
     <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
       {/* Fixed Header Area */}
@@ -14,8 +22,8 @@ export const DashboardLayout = () => {
         <ImpersonationBanner />
       </div>
 
-      {/* Adjust padding top to account for both TopNavigation and Banner */}
-      <div className="flex flex-1 overflow-hidden pt-[6.5rem]">
+      {/* Adjust padding dynamically */}
+      <div className={`flex flex-1 overflow-hidden ${topPadding}`}>
         {/* Sidebar */}
         <Sidebar />
 
