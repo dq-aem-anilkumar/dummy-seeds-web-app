@@ -1,9 +1,23 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, MessageCircle, Settings, User, LogOut, ChevronDown, ShoppingCart } from 'lucide-react';
+import {
+  Bell,
+  MessageCircle,
+  Settings,
+  User,
+  LogOut,
+  ChevronDown,
+  ShoppingCart,
+} from 'lucide-react';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
 import { Badge } from '../ui/badge';
 import { useAuth } from '../../hooks/useAuth';
 import { useCart } from '../../contexts/CartContext';
@@ -11,6 +25,7 @@ import { CartDrawer } from '../CartDrawer';
 import { useDispatch } from 'react-redux';
 import { logout } from '../../store/authSlice';
 import { toast } from '../ui/use-toast';
+import { useImpersonation } from '@/contexts/src/contexts/ImpersonationContext'; // ✅ ADD THIS
 
 export const TopNavigation = () => {
   const { user } = useAuth();
@@ -18,7 +33,9 @@ export const TopNavigation = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [cartOpen, setCartOpen] = useState(false);
-  
+
+  const { isImpersonating, exitImpersonation } = useImpersonation(); // ✅ INIT
+
   const [notifications] = useState([
     { id: 1, title: 'New order received', time: '5 min ago', read: false },
     { id: 2, title: 'User registered', time: '1 hour ago', read: false },
@@ -29,7 +46,17 @@ export const TopNavigation = () => {
     { id: 2, from: 'Jane Smith', message: 'Product inquiry about...', time: '30 min ago', read: true },
   ]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      if (isImpersonating) {
+        await exitImpersonation(); // ✅ Ensure impersonation mode is exited cleanly
+      }
+    } catch (err) {
+      // Fallback cleanup if impersonation service fails
+      localStorage.removeItem('impersonation_data');
+      localStorage.removeItem('original_user');
+    }
+
     dispatch(logout());
     toast({ title: 'Success', description: 'Logged out successfully' });
     navigate('/login');
@@ -60,17 +87,17 @@ export const TopNavigation = () => {
         </div>
 
         <div className="flex items-center space-x-4">
-          {/* Cart - Updated to show distinct items count */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          {/* Cart */}
+          <Button
+            variant="ghost"
+            size="icon"
             className="relative hover:bg-slate-100"
             onClick={() => setCartOpen(true)}
           >
             <ShoppingCart className="h-5 w-5 text-slate-600" />
             {cartState.totalItems > 0 && (
-              <Badge 
-                variant="destructive" 
+              <Badge
+                variant="destructive"
                 className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center"
               >
                 {cartState.totalItems}
@@ -81,16 +108,16 @@ export const TopNavigation = () => {
           {/* Notifications */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="relative hover:bg-slate-100"
                 onClick={handleNotificationClick}
               >
                 <Bell className="h-5 w-5 text-slate-600" />
                 {unreadNotifications > 0 && (
-                  <Badge 
-                    variant="destructive" 
+                  <Badge
+                    variant="destructive"
                     className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center"
                   >
                     {unreadNotifications}
@@ -121,16 +148,16 @@ export const TopNavigation = () => {
           {/* Messages */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="relative hover:bg-slate-100"
                 onClick={handleMessageClick}
               >
                 <MessageCircle className="h-5 w-5 text-slate-600" />
                 {unreadMessages > 0 && (
-                  <Badge 
-                    variant="destructive" 
+                  <Badge
+                    variant="destructive"
                     className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center"
                   >
                     {unreadMessages}
@@ -158,16 +185,6 @@ export const TopNavigation = () => {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {/* Settings */}
-          {/* <Button 
-            variant="ghost" 
-            size="icon" 
-            className="hover:bg-slate-100"
-            onClick={handleSettingsClick}
-          >
-            <Settings className="h-5 w-5 text-slate-600" />
-          </Button> */}
 
           {/* User Menu */}
           <DropdownMenu>
@@ -204,7 +221,7 @@ export const TopNavigation = () => {
           </DropdownMenu>
         </div>
       </div>
-      
+
       <CartDrawer open={cartOpen} onOpenChange={setCartOpen} />
     </>
   );
