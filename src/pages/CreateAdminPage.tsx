@@ -55,7 +55,8 @@ export const CreateAdminPage = () => {
       });
     } catch (error) {
       console.error('Failed to create admin:', error);
-      toast({ title: 'Error', description: 'Failed to create admin', variant: 'destructive' });
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to create admin';   
+      toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
