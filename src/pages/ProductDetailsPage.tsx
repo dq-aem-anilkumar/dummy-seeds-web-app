@@ -8,17 +8,26 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import {
   ArrowLeft,
-  ShoppingCart,
   Star,
   Package,
   Truck,
   Shield,
-  Heart
+  MessageCircleMore,
+  MailPlus
 } from 'lucide-react';
 import { productService } from '../services/productService';
 import { toast } from '../components/ui/use-toast';
-import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../hooks/useAuth';
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose
+} from '../components/ui/dialog';
+import { Input } from '../components/ui/input';
 
 interface ProductDetail {
   data: any;
@@ -39,6 +48,10 @@ interface ProductDetail {
   availability: boolean;
   createdAt: string;
   updatedAt: string;
+  ownerId?: string;
+  userId?: string;
+  pricePerKg?: number;
+  quantityKg?: number;
 }
 
 export const ProductDetailPage = () => {
@@ -46,13 +59,13 @@ export const ProductDetailPage = () => {
   const navigate = useNavigate();
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [quantity, setQuantity] = useState<number>(1);
-  const [isWishlisted, setIsWishlisted] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
-  const { addToCart, state } = useCart();
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'super admin';
   const API_BASE_URL = 'http://192.168.1.34:8081/uploads/images/';
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [desiredPrice, setDesiredPrice] = useState('');
+  const [desiredQuantity, setDesiredQuantity] = useState('');
 
   useEffect(() => {
     if (id) {
@@ -78,51 +91,32 @@ export const ProductDetailPage = () => {
     }
   };
 
-  const getRemainingStock = () => {
-    const cartQty = state.items.find(i => i.id === product?.id)?.quantityInKg || 0;
-    return product!.stock - cartQty;
-  };
+  const handleRequestConfirm = async () => {
+  try {
+    if (!product.data?.id) throw new Error('Missing product or user ID');
 
-  const handleAddToCart = () => {
-    if (!product || quantity <= 0) return;
-
-    const cartProduct = product.data || product;
-    const availableStock = product.stock;
-    const existingItem = state.items.find(item => item.id === cartProduct.id);
-    const existingQuantity = existingItem?.quantityInKg || 0;
-
-    if (existingQuantity + quantity > availableStock) {
-      toast({
-        title: 'Stock Error',
-        description: `Only ${availableStock - existingQuantity} more items available in stock`,
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const result = addToCart(cartProduct, quantity);
-
-    toast({
-      title: result.success ? 'Added to Cart!' : 'Error',
-      description: result.success
-        ? `${quantity} ${cartProduct.name} added to your cart`
-        : result.message || 'Failed to add to cart',
-      variant: result.success ? 'default' : 'destructive',
-      duration: 3000,
+    const response = await productService.sendNotificationRequest({
+      sellerId: product.data.userId,
+      productId: parseInt(product.data.id),
+      desireQuantity: parseInt(desiredQuantity),
+      desiredPricePerKg: parseFloat(desiredPrice),
     });
 
-    if (result.success) {
-      setQuantity(1);
-    }
-  };
-
-  const handleWishlist = () => {
-    setIsWishlisted(!isWishlisted);
     toast({
-      title: isWishlisted ? 'Removed from Wishlist' : 'Added to Wishlist',
-      description: `Product ${isWishlisted ? 'removed from' : 'added to'} your wishlist`
+      title: 'Request Sent',
+      description: `Desired Price ₹${desiredPrice} and Quantity ${desiredQuantity}kg sent.`,
     });
-  };
+  } catch (error) {
+    console.error('Failed to send request:', error);
+    toast({
+      title: 'Request Failed',
+      description: 'Unable to send your request',
+      variant: 'destructive',
+    });
+  } finally {
+    setIsRequestModalOpen(false);
+  }
+};
 
   const handleUserRating = (rating: number) => {
     setProduct((prev) => {
@@ -130,34 +124,12 @@ export const ProductDetailPage = () => {
       const newRating = prev.rating === rating ? 0 : rating;
       toast({
         title: newRating === 0 ? 'Rating removed' : 'Thanks for rating!',
-        description:
-          newRating === 0
-            ? 'You removed your rating.'
-            : `You rated this product ${newRating} star${newRating > 1 ? 's' : ''}`
+        description: newRating === 0
+          ? 'You removed your rating.'
+          : `You rated this product ${newRating} star${newRating > 1 ? 's' : ''}`
       });
       return { ...prev, rating: newRating };
     });
-  };
-
-  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value, 10);
-    const cartQuantity = state.items.find(i => i.id === product?.id)?.quantityInKg || 0;
-    if (!isNaN(value)) {
-      if (value + cartQuantity > product!.stock) {
-        toast({
-          title: 'Quantity Limit',
-          description: `Only ${product!.stock - cartQuantity} more items in stock you can add.`,
-          variant: 'destructive'
-        });
-        setQuantity(Math.max(1, product!.stock - cartQuantity));
-      } else {
-        setQuantity(Math.max(1, value));
-      }
-    }
-  };
-
-  const handleQuantityBlur = () => {
-    if (quantity < 1) setQuantity(1);
   };
 
   if (loading) {
@@ -182,8 +154,6 @@ export const ProductDetailPage = () => {
       </div>
     );
   }
-
-  const remainingStock = getRemainingStock();
 
   return (
     <div className="flex-1 p-6 space-y-6">
@@ -230,10 +200,8 @@ export const ProductDetailPage = () => {
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Badge variant="outline">{product.category}</Badge>
-              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                remainingStock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-              }`}>
-                {remainingStock > 0 ? 'In Stock' : 'Out of Stock'}
+              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
               </span>
             </div>
 
@@ -275,57 +243,58 @@ export const ProductDetailPage = () => {
             </div>
 
             {!isSuperAdmin && (
-              <>
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="number"
-                      name="quantity"
-                      value={quantity}
-                      onChange={handleQuantityChange}
-                      onBlur={handleQuantityBlur}
-                      min={1}
-                      max={remainingStock}
-                      disabled={remainingStock === 0}
-                      className="px-4 py-2 border rounded-md w-20 text-center focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
-                    <span className="text-sm text-gray-600 ml-2">
-                      ({remainingStock}Kg In Stock)
-                    </span>
-                  </div>
-                  {remainingStock === 0 && (
-                    <p className="text-sm text-red-600 mt-2">
-                      You have already added all available stock of this product.
-                    </p>
-                  )}
-                </div>
+              <div className="flex gap-4 mb-6">
+                <Dialog open={isRequestModalOpen} onOpenChange={setIsRequestModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+                      <MailPlus size={18} />
+                      Request
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Send Request</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 text-sm text-gray-700">
+                      {product && (
+                        <>
+                          <img
+                            src={`${API_BASE_URL}${product.data?.sampleImage}`}
+                            alt={product.data?.name || product.name}
+                            className="w-full h-64 object-cover rounded"
+                          />
+                          <p><strong>Product:</strong> {product.data?.name}</p>
+                          <p><strong>Price:</strong> ₹{product.data?.pricePerKg}/kg</p>
+                          <p><strong>Stock:</strong> {product.stock}kg</p>
+                          <Input
+                            type="number"
+                            placeholder="Desired Price (₹)"
+                            value={desiredPrice}
+                            onChange={(e) => setDesiredPrice(e.target.value)}
+                          />
+                          <Input
+                            type="number"
+                            placeholder="Desired Quantity (kg)"
+                            value={desiredQuantity}
+                            onChange={(e) => setDesiredQuantity(e.target.value)}
+                          />
+                        </>
+                      )}
+                    </div>
+                    <DialogFooter className="mt-4">
+                      <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                      </DialogClose>
+                      <Button onClick={handleRequestConfirm}>Confirm</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
 
-                <div className="flex gap-4 mb-6">
-                  <Button
-                    className="flex-1"
-                    onClick={handleAddToCart}
-                    title={
-                      !product?.availability
-                        ? 'Product is not available'
-                        : remainingStock <= 0
-                        ? 'Out of stock'
-                        : 'Add to Cart'
-                    }
-                    disabled={remainingStock === 0}
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    onClick={handleWishlist}
-                    className={isWishlisted ? 'text-red-600 border-red-600' : ''}
-                  >
-                    <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
-                  </Button>
-                </div>
-              </>
+                <Button className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+                  <MessageCircleMore size={18} />
+                  Chat
+                </Button>
+              </div>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">

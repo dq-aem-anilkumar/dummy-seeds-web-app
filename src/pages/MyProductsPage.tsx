@@ -29,7 +29,7 @@ export const MyProductsPage = () => {
   const [pageSize, setPageSize] = useState(5);
   const [totalRecords, setTotalRecords] = useState(0);
 
-  const API_BASE_URL = 'http://192.168.1.34:8081/uploads/images/';
+  const API_BASE_URL = 'http://192.168.1.25:8081/uploads/images/';
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -111,7 +111,7 @@ export const MyProductsPage = () => {
           <h1 className="text-2xl font-bold text-gray-900">My Products</h1>
           <p className="text-gray-600">Manage your product listings</p>
         </div>
-        <Button onClick={handleAddProduct} className="bg-blue-600 hover:bg-blue-700">Add Product</Button>
+        <Button onClick={handleAddProduct} className="bg-blue-600 hover:bg-blue-700">Add Products</Button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

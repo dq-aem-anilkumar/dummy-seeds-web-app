@@ -1,27 +1,38 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '../components/ui/card';
 import { productService } from '../services/productService';
-import { useAuth } from '../hooks/useAuth';
 import { toast } from '../components/ui/use-toast';
 import { Product } from '../types/product';
-import { Link } from 'react-router-dom';
-import { Heart } from 'lucide-react';
-import { useCart } from '../contexts/CartContext';
+import { useNavigate } from 'react-router-dom';
 import { PaginationControls } from '@/components/PaginationControls';
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose
+} from '../components/ui/dialog';
+import { MailPlus, MessageCircleMore } from 'lucide-react';
 
-const API_BASE_URL = 'http://192.168.1.34:8081/uploads/images/';
+const API_BASE_URL = 'http://192.168.1.25:8081/uploads/images/';
 
-const useDebounce = (value, delay) => {
+const useDebounce = (value: string, delay: number) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedValue(value);
     }, delay);
-    return () => {
-      clearTimeout(handler);
-    };
+    return () => clearTimeout(handler);
   }, [value, delay]);
   return debouncedValue;
 };
@@ -35,11 +46,12 @@ export const ProductsPage = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(25);
   const [totalRecords, setTotalRecords] = useState(0);
-  const [wishlist, setWishlist] = useState<Set<number>>(new Set());
-  const [quantities, setQuantities] = useState<Record<number, number>>({});
-  const { user, isUser } = useAuth();
-  const { addToCart } = useCart();
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [desiredPrice, setDesiredPrice] = useState('');
+  const [desiredQuantity, setDesiredQuantity] = useState('');
 
+  const navigate = useNavigate();
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   const fetchProducts = async (page = 0, search = '', filters = {}) => {
@@ -50,12 +62,10 @@ export const ProductsPage = () => {
       setTotalRecords(response.totalRecords || 0);
       setCurrentPage(page);
     } catch (error) {
-      console.error('Failed to fetch products:', error);
       toast({
         title: 'Error',
         description: 'Failed to fetch products',
-        variant: 'destructive',
-        duration: 3000,
+        variant: 'destructive'
       });
     } finally {
       setLoading(false);
@@ -68,81 +78,62 @@ export const ProductsPage = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    const minPriceNum = parseFloat(minPrice) || 0;
-    const maxPriceNum = parseFloat(maxPrice) || Infinity;
+    const min = parseFloat(minPrice) || 0;
+    const max = parseFloat(maxPrice) || Infinity;
 
-    if (minPrice && maxPrice && minPriceNum > maxPriceNum) {
+    if (min && max && min > max) {
       toast({
         title: 'Invalid Price Range',
-        description: 'Maximum price should be greater than minimum price',
-        variant: 'destructive',
-        duration: 3000,
+        description: 'Max price must be greater than Min price',
+        variant: 'destructive'
       });
       return;
     }
 
-    const filters = {
-      minPrice: minPrice ? minPriceNum : undefined,
-      maxPrice: maxPrice ? maxPriceNum : undefined,
-    };
-
-    fetchProducts(0, searchTerm, filters);
-  };
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  const handlePageSizeChange = (size: number) => {
-    setPageSize(size);
-    setCurrentPage(0);
-  };
-
-  const handleQuantityChange = (productId: number, change: number) => {
-    setQuantities(prev => {
-      const currentQuantity = prev[productId] || 1;
-      const newQuantity = Math.max(0.1, currentQuantity + change);
-      return { ...prev, [productId]: Math.round(newQuantity * 10) / 10 };
+    fetchProducts(0, searchTerm, {
+      minPrice: min || undefined,
+      maxPrice: max || undefined
     });
   };
 
-  const handleManualQuantityChange = (productId: number, value: string) => {
-    const parsed = parseFloat(value);
-    if (!isNaN(parsed)) {
-      setQuantities(prev => ({ ...prev, [productId]: Math.max(0.1, parsed) }));
+  const handleRequestConfirm = async () => {
+    if (!selectedProduct) return;
+
+    try {
+      const payload = {
+        sellerId: selectedProduct.userId,
+        productId: selectedProduct.id,
+        desireQuantity: parseInt(desiredQuantity),
+        desiredPricePerKg: parseFloat(desiredPrice),
+      };
+
+      await productService.sendNotificationRequest(payload);
+
+      toast({
+        title: 'Request Sent',
+        description: `Desired Price ₹${desiredPrice}/kg and Quantity ${desiredQuantity}kg sent.`,
+      });
+    } catch (error) {
+      console.error('Failed to send request:', error);
+      toast({
+        title: 'Request Failed',
+        description: 'Unable to send your request',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsRequestModalOpen(false);
     }
   };
 
-  const handleAddToCart = (product: Product) => {
-    if (!user) return;
-    const quantity = quantities[product.id] || 1;
-    const result = addToCart(product, quantity);
-    toast({
-      title: result.success ? 'Added to Cart!' : 'Error',
-      description: result.message,
-      variant: result.success ? 'default' : 'destructive',
-      duration: 3000,
-    });
+  const handleOpenRequest = (product: Product) => {
+    setSelectedProduct(product);
+    setDesiredPrice('');
+    setDesiredQuantity('');
+    setIsRequestModalOpen(true);
   };
 
-  const toggleWishlist = (productId: number) => {
-    const updatedWishlist = new Set(wishlist);
-    if (wishlist.has(productId)) {
-      updatedWishlist.delete(productId);
-      toast({
-        title: 'Removed',
-        description: 'Removed from wishlist.',
-        duration: 3000,
-      });
-    } else {
-      updatedWishlist.add(productId);
-      toast({
-        title: 'Wishlisted',
-        description: 'Added to your wishlist!',
-        duration: 3000,
-      });
-    }
-    setWishlist(updatedWishlist);
+  const handleCardClick = (id: number) => {
+    navigate(`/product-details/${id}`);
   };
 
   const totalPages = Math.ceil(totalRecords / pageSize);
@@ -194,79 +185,60 @@ export const ProductsPage = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {products.map((product) => {
-            const isWishlisted = wishlist.has(product.id);
-            const quantity = quantities[product.id] || 1;
-            return (
-              <Card key={product.id} className="overflow-hidden border rounded-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]">
-                <Link to={`/product-details/${product.id}`}>
-                  <div className="relative aspect-square bg-gray-100 group-hover:brightness-90 transition-all duration-300">
-                    {product.sampleImage ? (
-                      <img
-                        src={`${API_BASE_URL}${product.sampleImage}`}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-5xl text-gray-400">📦</div>
-                    )}
-                  </div>
-                  <CardHeader className="space-y-2 px-4 pt-4">
-                    <CardTitle className="text-xl font-semibold">{product.name}</CardTitle>
-                    <CardDescription className="text-gray-600 line-clamp-2">
-                      {product.description || 'No description available'}
-                    </CardDescription>
-                  </CardHeader>
-                </Link>
-                <CardContent className="px-4 pb-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-blue-600 font-bold text-lg">₹{product.pricePerKg}/kg</span>
-                    <span className="text-sm text-gray-500">{product.remainingQuantityKg}kg in stock</span>
-                  </div>
-
-                  {isUser() && (
-                    <div className="flex flex-col gap-2 mt-2">
-                      <div className="flex items-center gap-2">
-                        <label
-                          htmlFor={`quantity-${product.id}`}
-                          className="text-sm font-medium text-gray-700"
-                        >
-                          Quantity:
-                        </label>
-                        <Input
-                          id={`quantity-${product.id}`}
-                          name="quantity"
-                          type="number"
-                          step="0.1"
-                          min="0.1"
-                          className="w-16 text-center"
-                          value={quantities[product.id] || 1}
-                          onChange={(e) => handleManualQuantityChange(product.id, e.target.value)}
-                        />
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => handleAddToCart(product)}
-                          className="w-full"
-                          disabled={product.remainingQuantityKg === 0}
-                        >
-                          {product.remainingQuantityKg === 0 ? 'Out of Stock' : '🛒 Add to Cart'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => toggleWishlist(product.id)}
-                          className={`rounded-full w-9 h-9 flex items-center justify-center transition-all duration-200 ${isWishlisted ? 'text-red-600 border-blue-600' : ''}`}
-                        >
-                          <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
-                        </Button>
-                      </div>
+          {products.map((product) => (
+            <Card
+              key={product.id}
+              className="overflow-hidden border rounded-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]"
+            >
+              <div onClick={() => handleCardClick(product.id)} className="cursor-pointer">
+                <div className="relative aspect-square bg-gray-100 group-hover:brightness-90 transition-all duration-300">
+                  {product.sampleImage ? (
+                    <img
+                      src={`${API_BASE_URL}${product.sampleImage}`}
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-5xl text-gray-400">
+                      📦
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            );
-          })}
+                </div>
+                <CardHeader className="space-y-2 px-4 pt-4">
+                  <CardTitle className="text-xl font-semibold">{product.name}</CardTitle>
+                  <CardDescription className="text-gray-600 line-clamp-2">
+                    {product.description || 'No description available'}
+                  </CardDescription>
+                </CardHeader>
+              </div>
+              <CardContent className="px-4 pb-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-blue-600 font-bold text-lg">
+                    ₹{product.pricePerKg}/kg
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    {product.remainingQuantityKg}kg in stock
+                  </span>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    onClick={() => handleOpenRequest(product)}
+                    className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <MailPlus size={18} />
+                    Request
+                  </Button>
+
+                  <Button
+                    className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <MessageCircleMore size={18} />
+                    Chat
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
 
@@ -283,9 +255,67 @@ export const ProductsPage = () => {
         totalPages={totalPages}
         pageSize={pageSize}
         totalRecords={totalRecords}
-        onPageChange={handlePageChange}
-        onPageSizeChange={handlePageSizeChange}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
       />
+
+      <Dialog open={isRequestModalOpen} onOpenChange={setIsRequestModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Request</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm text-gray-700">
+            {selectedProduct && (
+              <>
+                <img
+                  src={`${API_BASE_URL}${selectedProduct.sampleImage}`}
+                  alt={selectedProduct.name}
+                  className="w-full h-64 object-cover rounded"
+                />
+                <p><strong>Product:</strong> {selectedProduct.name}</p>
+                <p><strong>Price:</strong> ₹{selectedProduct.pricePerKg}/kg</p>
+                <p><strong>Stock:</strong> {selectedProduct.remainingQuantityKg}kg</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="desiredPrice" className="block text-xs font-medium text-gray-700">
+                      Desired Price (₹/kg)
+                    </label>
+                    <input
+                      id="desiredPrice"
+                      type="number"
+                      min="0"
+                      value={desiredPrice}
+                      onChange={(e) => setDesiredPrice(e.target.value)}
+                      className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 text-sm"
+                      placeholder="Enter your price"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="desiredQty" className="block text-xs font-medium text-gray-700">
+                      Desired Quantity (kg)
+                    </label>
+                    <input
+                      id="desiredQty"
+                      type="number"
+                      min="1"
+                      value={desiredQuantity}
+                      onChange={(e) => setDesiredQuantity(e.target.value)}
+                      className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 text-sm"
+                      placeholder="Enter quantity"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter className="mt-4">
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button onClick={handleRequestConfirm}>Confirm</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

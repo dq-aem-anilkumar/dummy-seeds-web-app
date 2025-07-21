@@ -1,18 +1,16 @@
-
 import api from './api';
-import { ProductFormData } from '../types/product';
 
 export const productService = {
   getProducts: async (page = 0, size = 10, search = '', filters: any = {}, additionalParams: any = {}) => {
     const params = new URLSearchParams();
     params.append('page', page.toString());
     params.append('size', size.toString());
-    
+
     if (search) params.append('name', search);
     if (filters.minPrice) params.append('minPrice', filters.minPrice.toString());
     if (filters.maxPrice) params.append('maxPrice', filters.maxPrice.toString());
     if (filters.isActive !== undefined) params.append('isActive', filters.isActive.toString());
-    
+
     if (additionalParams.isForUserSpecific) {
       params.append('isForUserSpecific', 'true');
     }
@@ -48,4 +46,25 @@ export const productService = {
     const response = await api.delete(`/web/api/v1/product/${productId}`);
     return response.data;
   },
+
+  sendNotificationRequest: async ({
+  sellerId,
+  productId,
+  desireQuantity,
+  desiredPricePerKg,
+}: {
+  sellerId: string;
+  productId: number;
+  desireQuantity: number;
+  desiredPricePerKg: number;
+}) => {
+  const response = await api.post('/web/api/v1/notification/create', {
+    sellerId,
+    productId,
+    desireQuantity,
+    desiredPricePerKg,
+  });
+
+  return response.data;
+},
 };

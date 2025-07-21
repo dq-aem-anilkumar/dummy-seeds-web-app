@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, BarChart3, Package, ShoppingCart, Users, UserPlus, Store } from 'lucide-react';
+import { ChevronLeft, ChevronRight, BarChart3, Package, ShoppingCart, Users, UserPlus, Store, MessageCircleMore, MailPlus } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../lib/utils';
 
@@ -16,7 +16,7 @@ const sidebarItems = {
   ADMIN: [
     { title: 'Users', path: '/users', icon: Users },
     { title: 'Products', path: '/products', icon: Package },
-    { title: 'Impersonation', path: '/impersonation', icon: ShoppingCart },
+    { title: 'Impersonation', path: '/impersonation', icon: MessageCircleMore },
   ],
   USER: [
     { title: 'Products', path: '/products', icon: Package },
@@ -46,7 +46,7 @@ export const Sidebar = () => {
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="p-2 rounded-lg hover:bg-blue-500 transition-colors text-white"
+          className="p-2 rounded-md hover:bg-blue-500 transition-colors text-white"
         >
           {collapsed ? (
             <ChevronRight className="h-5 w-5" />
