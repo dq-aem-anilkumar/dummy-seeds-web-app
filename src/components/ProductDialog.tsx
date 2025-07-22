@@ -43,7 +43,7 @@ export const ProductDialog = ({
         quantityKg: product.quantityKg,
         pricePerKg: product.pricePerKg,
       });
-      setImagePreview(product.sampleImage ? `http://192.168.1.34:8081/uploads/images/${product.sampleImage}` : null);
+      setImagePreview(product.sampleImage ? `http://192.168.1.30:8081/uploads/images/${product.sampleImage}` : null);
     } else {
       setFormData({ name: '', description: '', quantityKg: 1, pricePerKg: 0 });
       setImagePreview(null);
