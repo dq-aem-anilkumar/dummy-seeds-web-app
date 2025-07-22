@@ -105,7 +105,7 @@ export const MyOrdersPage = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">My Orders</h1>
+        <h1 className="text-3xl font-bold">My Orders</h1>
         <div className="space-y-4">
           {[...Array(pageSize)].map((_, i) => (
             <Card key={i} className="animate-pulse">

@@ -25,141 +25,116 @@ import { CartDrawer } from '../CartDrawer';
 import { useDispatch } from 'react-redux';
 import { logout } from '../../store/authSlice';
 import { toast } from '../ui/use-toast';
-import { useImpersonation } from '@/contexts/src/contexts/ImpersonationContext'; // ✅ ADD THIS
+import { useImpersonation } from '@/contexts/src/contexts/ImpersonationContext';
+import { useChat } from '../../contexts/ChatContext';
+import { Dialog, DialogContent, DialogHeader, DialogFooter } from '../ui/dialog';
 
 export const TopNavigation = () => {
   const { user } = useAuth();
   const { state: cartState } = useCart();
+  const {
+    notifications,
+    messages,
+    unreadNotifications,
+    unreadMessages,
+    showNotificationDialog,
+    pendingRequest,
+    respondToRequest,
+    setPendingRequest,
+    setShowNotificationDialog,
+  } = useChat();
+
+  const { isImpersonating, exitImpersonation } = useImpersonation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
   const [cartOpen, setCartOpen] = useState(false);
-
-  const { isImpersonating, exitImpersonation } = useImpersonation(); // ✅ INIT
-
-  const [notifications] = useState([
-    { id: 1, title: 'New order received', time: '5 min ago', read: false },
-    { id: 2, title: 'User registered', time: '1 hour ago', read: false },
-    { id: 3, title: 'System update completed', time: '2 hours ago', read: true },
-  ]);
-  const [messages] = useState([
-    { id: 1, from: 'John Doe', message: 'Hello, I need help with...', time: '10 min ago', read: false },
-    { id: 2, from: 'Jane Smith', message: 'Product inquiry about...', time: '30 min ago', read: true },
-  ]);
+  const [loading, setLoading] = useState(false);
 
   const handleLogout = async () => {
     try {
-      if (isImpersonating) {
-        await exitImpersonation(); // ✅ Ensure impersonation mode is exited cleanly
-      }
-    } catch (err) {
-      // Fallback cleanup if impersonation service fails
+      if (isImpersonating) await exitImpersonation();
+    } catch {
       localStorage.removeItem('impersonation_data');
       localStorage.removeItem('original_user');
     }
-
     dispatch(logout());
     toast({ title: 'Success', description: 'Logged out successfully' });
     navigate('/login');
   };
 
-  const handleNotificationClick = () => {
-    toast({ title: 'Notifications', description: 'Notification panel opened' });
+  const handleNotificationClick = (notification: any) => {
+    if (!notification.read) {
+      dispatch({ type: 'MARK_NOTIFICATION_READ', payload: notification.id });
+    }
+    if (notification.type === 'CHAT_REQUEST' || notification.type === 'CALL_REQUEST') {
+      setPendingRequest(notification.data);
+      setShowNotificationDialog(true);
+    }
   };
 
-  const handleMessageClick = () => {
-    toast({ title: 'Messages', description: 'Message panel opened' });
+  const handleRespondToRequest = async (isRequestAccepted: boolean) => {
+    if (!pendingRequest) return;
+    setLoading(true);
+    await respondToRequest(pendingRequest.requestId, isRequestAccepted);
+    setLoading(false);
+    setShowNotificationDialog(false);
   };
-
-  const handleSettingsClick = () => {
-    toast({ title: 'Settings', description: 'Settings panel opened' });
-  };
-
-  const unreadNotifications = notifications.filter(n => !n.read).length;
-  const unreadMessages = messages.filter(m => !m.read).length;
 
   return (
     <>
       <div className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shadow-sm">
         <div className="flex items-center space-x-4">
-          <h2 className="text-xl font-semibold text-slate-800">
-            Dashboard
-          </h2>
+          <h2 className="text-xl font-semibold text-slate-800">Dashboard</h2>
         </div>
-
         <div className="flex items-center space-x-4">
-          {/* Cart */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative hover:bg-slate-100"
-            onClick={() => setCartOpen(true)}
-          >
+          <Button variant="ghost" size="icon" className="relative hover:bg-slate-100" onClick={() => setCartOpen(true)}>
             <ShoppingCart className="h-5 w-5 text-slate-600" />
             {cartState.totalItems > 0 && (
-              <Badge
-                variant="destructive"
-                className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center"
-              >
+              <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center">
                 {cartState.totalItems}
               </Badge>
             )}
           </Button>
 
-          {/* Notifications */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="relative hover:bg-slate-100"
-                onClick={handleNotificationClick}
-              >
+              <Button variant="ghost" size="icon" className="relative hover:bg-slate-100">
                 <Bell className="h-5 w-5 text-slate-600" />
                 {unreadNotifications > 0 && (
-                  <Badge
-                    variant="destructive"
-                    className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center"
-                  >
+                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center">
                     {unreadNotifications}
                   </Badge>
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
+            <DropdownMenuContent align="end" className="w-80 max-h-80 overflow-y-auto">
               <div className="p-3 border-b">
                 <h3 className="font-semibold text-slate-800">Notifications</h3>
               </div>
-              {notifications.map((notification) => (
-                <DropdownMenuItem key={notification.id} className="p-3 cursor-pointer">
-                  <div className="flex-1">
-                    <p className={`text-sm ${!notification.read ? 'font-semibold' : ''}`}>
-                      {notification.title}
-                    </p>
-                    <p className="text-xs text-slate-500">{notification.time}</p>
-                  </div>
-                  {!notification.read && (
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  )}
-                </DropdownMenuItem>
-              ))}
+              {notifications.length === 0 ? (
+                <div className="p-3 text-sm text-slate-500">No notifications</div>
+              ) : (
+                notifications.map((notification) => (
+                  <DropdownMenuItem key={notification.id} className="p-3 cursor-pointer" onClick={() => handleNotificationClick(notification)}>
+                    <div className="flex-1">
+                      <p className={`text-sm ${!notification.read ? 'font-semibold' : ''}`}>{notification.title}</p>
+                      <p className="text-xs text-slate-600 truncate">{notification.message}</p>
+                      <p className="text-xs text-slate-500">{new Date(notification.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    </div>
+                    {!notification.read && <div className="w-2 h-2 bg-blue-500 rounded-full"></div>}
+                  </DropdownMenuItem>
+                ))
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Messages */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="relative hover:bg-slate-100"
-                onClick={handleMessageClick}
-              >
+              <Button variant="ghost" size="icon" className="relative hover:bg-slate-100">
                 <MessageCircle className="h-5 w-5 text-slate-600" />
                 {unreadMessages > 0 && (
-                  <Badge
-                    variant="destructive"
-                    className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center"
-                  >
+                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center">
                     {unreadMessages}
                   </Badge>
                 )}
@@ -169,24 +144,23 @@ export const TopNavigation = () => {
               <div className="p-3 border-b">
                 <h3 className="font-semibold text-slate-800">Messages</h3>
               </div>
-              {messages.map((message) => (
+              {messages.slice(0, 5).map((message) => (
                 <DropdownMenuItem key={message.id} className="p-3 cursor-pointer">
                   <div className="flex-1">
-                    <p className={`text-sm ${!message.read ? 'font-semibold' : ''}`}>
-                      {message.from}
-                    </p>
-                    <p className="text-xs text-slate-600 truncate">{message.message}</p>
-                    <p className="text-xs text-slate-500">{message.time}</p>
+                    <p className={`text-sm ${!message.read ? 'font-semibold' : ''}`}>Chat Message</p>
+                    <p className="text-xs text-slate-600 truncate">{message.content}</p>
+                    <p className="text-xs text-slate-500">{new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                   </div>
-                  {!message.read && (
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  )}
+                  {!message.read && <div className="w-2 h-2 bg-blue-500 rounded-full"></div>}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* User Menu */}
+          <Button variant="ghost" size="icon" className="hover:bg-slate-100">
+            <Settings className="h-5 w-5 text-slate-600" />
+          </Button>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center space-x-2 hover:bg-slate-100">
@@ -205,22 +179,44 @@ export const TopNavigation = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
-                <User className="mr-2 h-4 w-4" />
-                Profile
+                <User className="mr-2 h-4 w-4" /> Profile
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate('/edit-profile')} className="cursor-pointer">
-                <Settings className="mr-2 h-4 w-4" />
-                Edit Profile
+                <Settings className="mr-2 h-4 w-4" /> Edit Profile
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600">
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign Out
+                <LogOut className="mr-2 h-4 w-4" /> Sign Out
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
+
+      <Dialog open={showNotificationDialog} onOpenChange={setShowNotificationDialog}>
+        <DialogContent className="bg-white backdrop-blur-sm">
+          <DialogHeader>
+            <h2 className="text-lg font-semibold">Respond to Request</h2>
+          </DialogHeader>
+          {pendingRequest && (
+            <div className="space-y-2">
+              <p>
+                <strong>{pendingRequest.senderName}</strong> wants to{' '}
+                {pendingRequest.requestType.toLowerCase()} about{' '}
+                <strong>{pendingRequest.productName}</strong>
+              </p>
+            </div>
+          )}
+          <DialogFooter className="mt-4 flex justify-end gap-2">
+            <Button variant="outline" onClick={() => handleRespondToRequest(false)} disabled={loading}>
+              Reject
+            </Button>
+            <Button onClick={() => handleRespondToRequest(true)} disabled={loading}>
+              Accept
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <CartDrawer open={cartOpen} onOpenChange={setCartOpen} />
     </>

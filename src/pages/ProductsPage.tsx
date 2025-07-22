@@ -6,7 +6,8 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
+
 } from '../components/ui/card';
 import { productService } from '../services/productService';
 import { toast } from '../components/ui/use-toast';
@@ -22,9 +23,9 @@ import {
   DialogFooter,
   DialogClose
 } from '../components/ui/dialog';
-import { MailPlus, MessageCircleMore } from 'lucide-react';
+import { MailPlus, MessageCircleMore, Search } from 'lucide-react';
 
-const API_BASE_URL = 'http://192.168.1.25:8081/uploads/images/';
+const API_BASE_URL = 'http://192.168.1.30:8081/uploads/images/';
 
 const useDebounce = (value: string, delay: number) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -168,7 +169,12 @@ export const ProductsPage = () => {
           onChange={(e) => setMaxPrice(e.target.value)}
           className="w-24"
         />
-        <Button type="submit">🔍 Search</Button>
+       <Button
+  type="submit"
+  className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-black">
+  <Search size={18} />
+  Search
+</Button>
       </form>
 
       {loading ? (

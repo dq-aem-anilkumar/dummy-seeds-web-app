@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, BarChart3, Package, ShoppingCart, Users, UserPlus, Store, MessageCircleMore, MailPlus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, BarChart3, Package, ShoppingCart, Users, UserPlus, Store, MessageCircleMore, MailPlus,Search } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../lib/utils';
 
