@@ -16,6 +16,15 @@ export const useWebSocketChat = ({ onMessageReceived, onConnectionChange }: UseW
   const connect = useCallback(() => {
     try {
       const token = localStorage.getItem('token');
+      
+      // Skip connection if no token is available
+      if (!token) {
+        console.log('No authentication token available, skipping WebSocket connection');
+        setIsConnected(false);
+        onConnectionChange(false);
+        return;
+      }
+      
       const wsUrl = `wss://api.myapp.com/ws/chat?token=${token}`;
       
       wsRef.current = new WebSocket(wsUrl);
