@@ -35,7 +35,6 @@ import NotFound from "./pages/NotFound";
 import { ProductDetailPage } from "./pages/ProductDetailsPage";
 import { NotificationDialog } from "./components/NotificationDialog";
 import { LiveChat } from "./components/Chat";
-import { LiveChat } from "./components/Chat";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -152,7 +151,6 @@ const App = () => (
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>
-              <LiveChat />
               <LiveChat />
             </TooltipProvider>
           </ImpersonationProvider>
